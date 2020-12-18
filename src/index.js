@@ -8,25 +8,22 @@ const GameEvents = {
 }
 
 
-class Walker extends Phaser.GameObjects.PathFollower {
+class Walker extends Phaser.GameObjects.Arc {
   constructor(scene, path)
   {
-    super(scene, path, path.getEndPoint().x, path.getEndPoint().y, '', '')
-    this.setSize(10, 10)
+    super(scene, path.getEndPoint().x, path.getEndPoint().y, 10)
 
+    Object.assign(this, Phaser.GameObjects.Components.PathFollower)
+
+    this.setPath(path)
+    this.setStrokeStyle(2, 0x662222, 1)
     this.setData({
       state: '',
       coreDamagePerSecond: '',
       attackPlayer: false,
     })
 
-    this.icon = new Phaser.GameObjects.Arc(scene, this.x, this.y, 10, undefined, undefined, 0x660000)
-    this.icon.setActive(false).setVisible(false)
-
     this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      scene.add.existing(this.icon)
-      this.icon.setActive(true).setVisible(true)
-
       this.startFollow({
         duration: 3000, // TODO
         positionOnPath: true,
@@ -42,12 +39,17 @@ class Walker extends Phaser.GameObjects.PathFollower {
           }
         }
       })
-
     })
 
     this.on(Phaser.GameObjects.Events.DESTROY, () => {
-      this.icon.destroy()
     })
+  }
+
+  preUpdate(time, delta)
+  {
+    // Arc does not have a preUpdate, but Sprite does
+    // super.preUpdate()
+    this.pathUpdate(time)
   }
 
   postUpdate(time, delta)
@@ -65,7 +67,7 @@ class Portal extends Phaser.GameObjects.Graphics {
 
     // represents the path
     this.path = new Phaser.Curves.Path(origin.x, origin.y)
-    // represents the spawner (currently a circle at the end of the line)
+    // represents the spawner (currently a square at the end of the line)
     // this.icon = undefined
     // spawned "monsters" are added to this group
     this.monsters = new Phaser.GameObjects.Group(scene)
@@ -344,77 +346,9 @@ class Game extends Phaser.Scene {
     this.debugText = this.add.text(0, 0, ``)
   }
 
-  testSpawnBrancher()
-  {
-    const { width, height } = this.sys.game.canvas
-
-    const styles = [ 0x333333, 0x444444, 0x555555, 0x666666, 0x777777, 0x888888 ]
-
-    const gfx = this.add.graphics()
-    gfx.lineStyle(2, 0x333333, 1)
-
-    this.path = new Phaser.Curves.Path(width / 2, height / 2)
-
-    const plot = () => {
-      let angle
-      let length
-
-      // Angle for first plot of random
-      if (this.path.curves.length === 0)
-      {
-        // right
-        // angle = [.5, -.5]
-        // left
-        // angle = [Math.PI-.5, Math.PI+.5]
-
-        // real
-        angle = [-Math.PI, Math.PI]
-      }
-      else
-      {
-        const previous = this.path.curves[this.path.curves.length - 1]
-
-        // console.log("Previous points", previous.getStartPoint().x, previous.getStartPoint().y, previous.getEndPoint().x, previous.getEndPoint().y)
-
-        // Get the angle of the previous points
-        const pAngle = Phaser.Math.Angle.BetweenPoints(previous.getStartPoint(), previous.getEndPoint())
-        angle = [ pAngle - ((Math.PI * 0.25)), pAngle - (-Math.PI * 0.25) ]
-      }
-
-      length = Phaser.Math.RND.between(50, 100)
-      angle = (Phaser.Math.RND.realInRange(...angle))
-
-      const next = new Phaser.Math.Vector2()
-      next.copy(this.path.getEndPoint())
-      // console.log(`From ${next.x}, ${next.y} at ${angle} for ${length}`)
-      next.setAngle(angle)
-      next.setLength(length)
-      // console.log("Add", next.x, next.y)
-      next.add(this.path.getEndPoint())
-      this.path.lineTo(next.x, next.y)
-
-      // gfx.clear()
-      this.path.draw(gfx)
-    }
-
-    const delay = 100
-    const timeout = () => {
-      plot()
-
-      if (this.path.curves.length < 6)
-      {
-        this.countDownTimer = this.time.delayedCall(delay, timeout)
-      }
-    }
-
-    timeout()
-
-  }
-
   update()
   {
     const pointer = this.input.activePointer
-
 
     // const angle = Phaser.Math.Angle.BetweenPoints(this.path.getStartPoint(), pointer)
     // this.debugText.setText(`${angle}`)
