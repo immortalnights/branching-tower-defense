@@ -4,7 +4,8 @@ import Phaser from 'phaser';
 
 
 const GameEvents = {
-  PORTAL_EXPIRED: 'portalexpired'
+  PORTAL_EXPIRED: 'portalexpired',
+  MONSTER_KILLED: 'monsterkilled'
 }
 
 
@@ -17,10 +18,19 @@ class Walker extends Phaser.GameObjects.Arc {
 
     this.setPath(path)
     this.setStrokeStyle(2, 0x662222, 1)
+    this.setInteractive()
+
     this.setData({
       state: '',
       coreDamagePerSecond: '',
       attackPlayer: false,
+    })
+
+    this.on('pointerdown', () => {
+      // this.setData('state', Walker.States.DEAD)
+      this.emit(GameEvents.MONSTER_KILLED, this)
+      this.setVisible(false)
+      // this.destroy()
     })
 
     this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
@@ -33,6 +43,11 @@ class Walker extends Phaser.GameObjects.Arc {
           // the players life if the enemy is active.
           if (this.active)
           {
+            if (this.emitter)
+            {
+              this.emitter.remove()
+            }
+
             // TODO monsters don't die when reaching the core, they attack it
             // causing core damage per second
             this.destroy()
@@ -72,6 +87,17 @@ class Portal extends Phaser.GameObjects.Graphics {
     // spawned "monsters" are added to this group
     this.monsters = new Phaser.GameObjects.Group(scene)
 
+    this.particleManager = new Phaser.GameObjects.Particles.ParticleEmitterManager(scene, 'flare')
+    this.exploderEmitter = this.particleManager.createEmitter({
+      frequency: -1,
+      speed: { min: -500, max: 500 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.05, end: 0 },
+      blendMode: 'ADD',
+      lifespan: 300,
+      tint: 0x990000
+    })
+
     // TODO pick better wave / monster counts
     this.setData({
       state: Portal.States.WAVE_COUNTDOWN,
@@ -97,13 +123,15 @@ class Portal extends Phaser.GameObjects.Graphics {
     this.plotPath(0)
 
     this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      scene.add.existing(this.monsters, true)
+      scene.add.existing(this.monsters)
+      scene.add.existing(this.particleManager)
       this.redraw()
     })
 
     this.on(Phaser.GameObjects.Events.DESTROY, () => {
       this.path.destroy()
       this.monsters.destroy()
+      this.particleManager.destroy()
     })
   }
 
@@ -134,6 +162,21 @@ class Portal extends Phaser.GameObjects.Graphics {
         if (time > this.getData('nextSpawnAt'))
         {
           const monster = new Walker(this.scene, this.path)
+          monster.on(GameEvents.MONSTER_KILLED, obj => {
+            this.exploderEmitter.setPosition(obj.x, obj.y)
+            this.exploderEmitter.explode(10)
+
+            // TODO pass the Portal or emitter to the monster and get it to do this
+            obj.emitter = this.particleManager.createEmitter({
+              frequency: 1,
+              speed: 20,
+              scale: { start: 0.05, end: 0 },
+              blendMode: 'ADD',
+              tint: 0x444444
+            })
+
+            obj.emitter.startFollow(obj)
+          })
           this.monsters.add(monster, true)
 
           this.incData('spawned')
@@ -149,6 +192,12 @@ class Portal extends Phaser.GameObjects.Graphics {
               state: Portal.States.WAVE_COOLDOWN,
               nextSpawnAt: 0
             })
+
+            // TODO remove, for demonstration purposed, kill them all!
+            // this.monsters.getChildren().forEach(monster => {
+            //   monster.emit(GameEvents.MONSTER_KILLED, monster)
+            //   monster.setVisible(false)
+            // })
           }
         }
         break
@@ -171,6 +220,9 @@ class Portal extends Phaser.GameObjects.Graphics {
             this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
             this.redraw()
           }
+        }
+        else
+        {
         }
         break
       }
@@ -323,12 +375,14 @@ class Game extends Phaser.Scene {
 
   preload()
   {
+    this.load.image('flare', './src/assets/flare_01.png')
   }
 
   create()
   {
     const { width, height } = this.sys.game.canvas
 
+    // this.portalParticles = this.add.particles('flare')
 
     this.portals = new Phaser.GameObjects.Group(this)
     this.monsters = new Phaser.Physics.Arcade.Group(this)
@@ -358,8 +412,8 @@ class Game extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: 1024,
+  height: 768,
   scene: Game,
   seed: 1
 };
