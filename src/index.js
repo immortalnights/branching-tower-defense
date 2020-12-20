@@ -8,6 +8,57 @@ const GameEvents = {
   MONSTER_KILLED: 'monsterkilled'
 }
 
+class Projectile extends Phaser.GameObjects.Arc {
+  constructor(scene, x, y, radius)
+  {
+    super(scene, x, y, radius)
+    this.setFillStyle(0xBBBBBB, 1)
+
+    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+      // this.body.setVelocity(200, 200)
+    })
+  }
+}
+
+
+class Ship extends Phaser.GameObjects.Graphics {
+  constructor(scene, x, y)
+  {
+    super(scene, { x, y })
+
+    // Draw sprite
+    this.lineStyle(2, 0x662266, 1)
+    this.beginPath()
+    this.arc(0, 0, 10, 0, Math.PI * 2)
+    this.moveTo(0, 0)
+    this.lineTo(10, 0)
+    this.closePath()
+    this.strokePath()
+
+    this.projectiles = new Phaser.GameObjects.Group()
+
+    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+      this.body.setDamping(true)
+      this.body.setDrag(0.1)
+      this.body.setMaxVelocity(200)
+    })
+  }
+
+  fire()
+  {
+    const p = new Projectile(this.scene, this.x, this.y, 2)
+    this.scene.projectiles.add(p, true)
+    this.projectiles.add(p)
+    this.scene.physics.velocityFromRotation(this.rotation, 200, p.body.velocity)
+  }
+
+  // preUpdate()
+  // {
+  //   super.preUpdate()
+
+  // }
+}
+
 
 class Walker extends Phaser.GameObjects.Arc {
   constructor(scene, path)
@@ -18,7 +69,7 @@ class Walker extends Phaser.GameObjects.Arc {
 
     this.setPath(path)
     this.setStrokeStyle(2, 0x662222, 1)
-    this.setInteractive()
+    // this.setInteractive()
 
     this.setData({
       state: '',
@@ -26,14 +77,14 @@ class Walker extends Phaser.GameObjects.Arc {
       attackPlayer: false,
     })
 
-    this.on('pointerdown', () => {
-      // this.setData('state', Walker.States.DEAD)
-      this.emit(GameEvents.MONSTER_KILLED, this)
-      this.setVisible(false)
-      // this.destroy()
-    })
+    // this.on('pointerdown', () => {
+    //   // this.setData('state', Walker.States.DEAD)
+    //   this.emit(GameEvents.MONSTER_KILLED, this)
+    //   this.setVisible(false)
+    //   // this.destroy()
+    // })
 
-    this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       this.startFollow({
         duration: 3000, // TODO
         positionOnPath: true,
@@ -56,8 +107,19 @@ class Walker extends Phaser.GameObjects.Arc {
       })
     })
 
-    this.on(Phaser.GameObjects.Events.DESTROY, () => {
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
     })
+  }
+
+  takeDamage(amount)
+  {
+    this.kill()
+  }
+
+  kill()
+  {
+    this.emit(GameEvents.MONSTER_KILLED, this)
+    this.setVisible(false)
   }
 
   preUpdate(time, delta)
@@ -115,20 +177,20 @@ class Portal extends Phaser.GameObjects.Graphics {
       waveMonsters: 6,
       // monsters spawned this wave
       spawnedForWave: 0,
-      // total mosters spawned
+      // total monsters spawned
       spawned: 0,
     })
 
     // TODO - plot incrementally over time for a better effect
     this.plotPath(0)
 
-    this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       scene.add.existing(this.monsters)
       scene.add.existing(this.particleManager)
       this.redraw()
     })
 
-    this.on(Phaser.GameObjects.Events.DESTROY, () => {
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
       this.path.destroy()
       this.monsters.destroy()
       this.particleManager.destroy()
@@ -162,7 +224,7 @@ class Portal extends Phaser.GameObjects.Graphics {
         if (time > this.getData('nextSpawnAt'))
         {
           const monster = new Walker(this.scene, this.path)
-          monster.on(GameEvents.MONSTER_KILLED, obj => {
+          monster.once(GameEvents.MONSTER_KILLED, obj => {
             this.exploderEmitter.setPosition(obj.x, obj.y)
             this.exploderEmitter.explode(10)
 
@@ -177,7 +239,8 @@ class Portal extends Phaser.GameObjects.Graphics {
 
             obj.emitter.startFollow(obj)
           })
-          this.monsters.add(monster, true)
+          this.monsters.add(monster)
+          this.scene.monsters.add(monster, true)
 
           this.incData('spawned')
           this.incData('spawnedForWave')
@@ -382,20 +445,38 @@ class Game extends Phaser.Scene {
   {
     const { width, height } = this.sys.game.canvas
 
-    // this.portalParticles = this.add.particles('flare')
+    // accelerate decelerate
+    this.bindings = this.input.keyboard.addKeys({
+      ACCELERATE: 'W',
+      DECELERATE: 'S',
+      STRAFE_RIGHT: 'A',
+      STRAFE_LEFT: 'D',
+      ACCELERATE_ALT: 'UP',
+      DECELERATE_ALT: 'DOWN',
+      STRAFE_RIGHT_ALT: 'RIGHT',
+      STRAFE_LEFT_ALT: 'LEFT',
+    })
 
-    this.portals = new Phaser.GameObjects.Group(this)
-    this.monsters = new Phaser.Physics.Arcade.Group(this)
+    this.playerShip = new Ship(this, 80, 80)
+    this.physics.add.existing(this.playerShip)
+    this.add.existing(this.playerShip)
 
-    this.add.existing(this.portals)
-    this.add.existing(this.monsters)
+    this.projectiles = this.physics.add.group()
+
+    this.portals = this.add.group()
+    this.monsters = this.physics.add.group()
 
     const PORTAL_COUNT = 5
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
-      const spawner = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
-      this.portals.add(spawner, true)
+      const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
+      this.portals.add(portal, true)
     }
+
+    this.physics.add.collider(this.projectiles, this.monsters, (projectile, monster) => {
+      monster.takeDamage(projectile.getData('damage'))
+      projectile.destroy()
+    })
 
     this.debugText = this.add.text(0, 0, ``)
   }
@@ -404,8 +485,46 @@ class Game extends Phaser.Scene {
   {
     const pointer = this.input.activePointer
 
-    // const angle = Phaser.Math.Angle.BetweenPoints(this.path.getStartPoint(), pointer)
-    // this.debugText.setText(`${angle}`)
+    const targetAngle = Phaser.Math.Angle.BetweenPoints(this.playerShip, pointer)
+    const nextAngle = Phaser.Math.Angle.RotateTo(this.playerShip.rotation, targetAngle, 0.1)
+    this.playerShip.rotation = nextAngle
+    this.debugText.setText(`${this.playerShip.rotation.toFixed(2)}, ${this.playerShip.body.velocity.x.toFixed(2)}, ${this.playerShip.body.velocity.y.toFixed(2)}`)
+
+    let firing = false
+    if (pointer.isDown && pointer.button === 0)
+    {
+      this.playerShip.fire()
+    }
+
+
+    let accelerating = false
+
+    if (this.bindings.ACCELERATE.isDown || this.bindings.ACCELERATE_ALT.isDown)
+    {
+      this.physics.velocityFromRotation(this.playerShip.rotation, 200, this.playerShip.body.acceleration)
+      accelerating = true
+    }
+    else if (this.bindings.DECELERATE.isDown || this.bindings.DECELERATE_ALT.isDown)
+    {
+      this.physics.velocityFromRotation(this.playerShip.rotation + Math.PI, 200, this.playerShip.body.acceleration)
+      accelerating = true
+    }
+
+    if (this.bindings.STRAFE_RIGHT.isDown || this.bindings.STRAFE_RIGHT_ALT.isDown)
+    {
+      this.physics.velocityFromRotation(this.playerShip.rotation + (Math.PI / 2), 200, this.playerShip.body.acceleration)
+      accelerating = true
+    }
+    else if (this.bindings.STRAFE_LEFT.isDown || this.bindings.STRAFE_LEFT_ALT.isDown)
+    {
+      this.physics.velocityFromRotation(this.playerShip.rotation - (Math.PI / 2), 200, this.playerShip.body.acceleration)
+      accelerating = true
+    }
+
+    if (!accelerating)
+    {
+      this.playerShip.body.setAcceleration(0)
+    }
   }
 }
 
@@ -415,7 +534,13 @@ const config = {
   width: 1024,
   height: 768,
   scene: Game,
-  seed: 1
+  seed: 1,
+  physics: {
+    default: 'arcade',
+    arcade: {
+      debug: false
+    }
+  }
 };
 
 const game = new Phaser.Game(config);
