@@ -438,7 +438,7 @@ class Game extends Phaser.Scene {
 
   preload()
   {
-    this.load.image('flare', './src/assets/flare_01.png')
+    this.load.image('flare', './flare_01.png')
   }
 
   create()
@@ -497,39 +497,36 @@ class Game extends Phaser.Scene {
     }
 
 
-    let accelerating = false
+    let acceleration = { x: 0, y: 0 }
 
     if (this.bindings.ACCELERATE.isDown || this.bindings.ACCELERATE_ALT.isDown)
     {
-      this.physics.velocityFromRotation(this.playerShip.rotation, 200, this.playerShip.body.acceleration)
-      accelerating = true
+      acceleration.y = -200
+      // this.physics.velocityFromRotation(this.playerShip.rotation, 200, this.playerShip.body.acceleration)
     }
     else if (this.bindings.DECELERATE.isDown || this.bindings.DECELERATE_ALT.isDown)
     {
-      this.physics.velocityFromRotation(this.playerShip.rotation + Math.PI, 200, this.playerShip.body.acceleration)
-      accelerating = true
+      acceleration.y = 200
+      // this.physics.velocityFromRotation(this.playerShip.rotation + Math.PI, 200, this.playerShip.body.acceleration)
     }
 
     if (this.bindings.STRAFE_RIGHT.isDown || this.bindings.STRAFE_RIGHT_ALT.isDown)
     {
-      this.physics.velocityFromRotation(this.playerShip.rotation + (Math.PI / 2), 200, this.playerShip.body.acceleration)
-      accelerating = true
+      acceleration.x = 200
+      // this.physics.velocityFromRotation(this.playerShip.rotation + (Math.PI / 2), 200, this.playerShip.body.acceleration)
     }
     else if (this.bindings.STRAFE_LEFT.isDown || this.bindings.STRAFE_LEFT_ALT.isDown)
     {
-      this.physics.velocityFromRotation(this.playerShip.rotation - (Math.PI / 2), 200, this.playerShip.body.acceleration)
-      accelerating = true
+      acceleration.x = -200
+      // this.physics.velocityFromRotation(this.playerShip.rotation - (Math.PI / 2), 200, this.playerShip.body.acceleration)
     }
 
-    if (!accelerating)
-    {
-      this.playerShip.body.setAcceleration(0)
-    }
+    this.playerShip.body.setAcceleration(acceleration.x, acceleration.y)
   }
 }
 
-
 const config = {
+  title: "Branching Tower Defense",
   type: Phaser.AUTO,
   width: 1024,
   height: 768,
@@ -540,7 +537,12 @@ const config = {
     arcade: {
       debug: false
     }
-  }
+  },
+  loader: {
+    baseUrl: '.',
+    path: process.env.NODE_ENV === 'production' ? './assets' : './src/assets'
+  },
+  disableContextMenu: true
 };
 
 const game = new Phaser.Game(config);
