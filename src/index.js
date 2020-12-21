@@ -2,10 +2,14 @@
 
 import Phaser from 'phaser';
 
+const UI_DEPTH = 1000
+const PLAYER_DEPTH = 100
 
 const GameEvents = {
-  PORTAL_EXPIRED: 'portalexpired',
-  MONSTER_KILLED: 'monsterkilled'
+  PORTAL_EXPIRED: 'portal:expired',
+  MONSTER_KILLED: 'monster:killed',
+  TOWER_SELECT: 'tower:select',
+  TOWER_BUILD: 'tower:build',
 }
 
 class Projectile extends Phaser.GameObjects.Arc {
@@ -25,6 +29,7 @@ class Ship extends Phaser.GameObjects.Graphics {
   constructor(scene, x, y)
   {
     super(scene, { x, y })
+    this.setDepth(PLAYER_DEPTH)
 
     // Draw sprite
     this.lineStyle(2, 0x662266, 1)
@@ -39,7 +44,7 @@ class Ship extends Phaser.GameObjects.Graphics {
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       this.body.setDamping(true)
-      this.body.setDrag(0.1)
+      this.body.setDrag(0.01)
       this.body.setMaxVelocity(200)
     })
   }
@@ -69,20 +74,12 @@ class Walker extends Phaser.GameObjects.Arc {
 
     this.setPath(path)
     this.setStrokeStyle(2, 0x662222, 1)
-    // this.setInteractive()
 
     this.setData({
       state: '',
       coreDamagePerSecond: '',
       attackPlayer: false,
     })
-
-    // this.on('pointerdown', () => {
-    //   // this.setData('state', Walker.States.DEAD)
-    //   this.emit(GameEvents.MONSTER_KILLED, this)
-    //   this.setVisible(false)
-    //   // this.destroy()
-    // })
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       this.startFollow({
@@ -136,6 +133,180 @@ class Walker extends Phaser.GameObjects.Arc {
   }
 }
 
+class TowerUI extends Phaser.GameObjects.Container {
+  constructor(scene, tower)
+  {
+    super(scene, tower.x, tower.y)
+    this.setDepth(UI_DEPTH)
+    this.setSize(64, 64)
+    this.setInteractive()
+
+    this.tower = tower
+
+    this.gfx = new Phaser.GameObjects.Graphics(scene, { x: -32, y: -32 })
+    this.add(this.gfx)
+
+    const towerTypes = [
+      {
+        id: "damage1",
+        name: "Damage 1",
+        displayName: "1"
+      },
+      {
+        id: "damage2",
+        name: "Damage 2",
+        displayName: "2"
+      },
+      {
+        id: "damage3",
+        name: "Damage 3",
+        displayName: "3"
+      },
+      {
+        id: "damage4",
+        name: "Damage 4",
+        displayName: "4"
+      }
+    ]
+
+    // buttons
+    // this.buttons = []
+    let buttonX = 0
+    let buttonY = 0
+    towerTypes.forEach((type, index) => {
+      buttonX = -19 + (index % 2 === 0 ? 4 : 34)
+      buttonY = -19 + (4 + (30 * Math.floor(index / 2)))
+
+      const rect = new Phaser.GameObjects.Rectangle(scene, buttonX, buttonY, 26, 26)
+      rect.setInteractive()
+      rect.setStrokeStyle(1, 0x444444, 1)
+
+      rect.on('pointerdown', (pointer, localX, localY, event) => {
+        event.stopPropagation()
+        this.scene.events.emit(GameEvents.TOWER_BUILD, this.tower, type.id)
+      })
+
+      rect.on('pointerover', () => {
+        rect.setStrokeStyle(1, 0x4444FF, 1)
+      })
+
+      rect.on('pointerout', () => {
+        rect.setStrokeStyle(1, 0x444444, 1)
+      })
+
+      this.add(rect)
+
+      const label = new Phaser.GameObjects.Text(scene, buttonX, buttonY, type.displayName)
+      label.setOrigin(0.5, 0.5)
+      this.add(label)
+    })
+
+    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+      this.draw()
+    })
+
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+    })
+
+    this.on('pointerdown', (pointer, localX, localY, event) => {
+      event.stopPropagation()
+    })
+  }
+
+  draw(overX, overY)
+  {
+    this.gfx.clear()
+
+    this.gfx.setDepth(UI_DEPTH + 1)
+    this.gfx.lineStyle(1, 0x444444, 1)
+    this.gfx.fillStyle(0x000000, 0.8)
+    this.gfx.fillRect(0, 0, 64, 64)
+    this.gfx.strokeRect(0, 0, 64, 64)
+
+    // let x = 0
+    // let y = 0
+    // for (let box = 0; box < 4; box++)
+    // {
+    //   x = box % 2 === 0 ? 4 : 34
+    //   y = 4 + (30 * Math.floor(box / 2))
+
+    //   const rect = new Phaser.Geom.Rectangle(x, y, 26, 26)
+
+    //   const isOver = Phaser.Geom.Rectangle.Contains(rect, overX, overY)
+    //   this.gfx.lineStyle(1, isOver ? 0x111111 : 0x444444, 1)
+    //   this.gfx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+    // }
+  }
+}
+
+class Tower extends Phaser.GameObjects.Container {
+  constructor(scene, x, y)
+  {
+    super(scene, x, y)
+    this.setSize(16, 16)
+    this.setInteractive()
+
+    const defaultColor = 0x111111
+    this.setData({
+      active: false,
+      color: defaultColor,
+    })
+
+    const arc = new Phaser.GameObjects.Arc(scene, 0, 0, 8)
+    arc.setStrokeStyle(2, defaultColor, 1)
+    this.add(arc)
+
+    this.on('pointerdown', (pointer, x, y, event) => {
+      event.stopPropagation()
+      this.scene.events.emit(GameEvents.TOWER_SELECT, this)
+    })
+
+
+    const selectionArc = new Phaser.GameObjects.Arc(scene, 0, 0, 14)
+    selectionArc.setStrokeStyle(2, 0xDDDDDD, 1)
+    selectionArc.setVisible(false)
+    this.add(selectionArc)
+
+    this.on('changedata-color', (obj, val, previous) => {
+      arc.setStrokeStyle(2, val, 1)
+    })
+
+    this.on('changedata-active', (obj, val, previous) => {
+      selectionArc.setVisible(val)
+    })
+  }
+
+  build(type)
+  {
+    let color = undefined
+    switch (type)
+    {
+      case 'damage1':
+      {
+        color = 0xFF0000
+        break
+      }
+      case 'damage2':
+      {
+        color = 0x0000FF
+        break
+      }
+      case 'damage3':
+      {
+        color = 0xFFFF00
+        break
+      }
+      case 'damage4':
+      {
+        color = 0xFF9800
+        break
+      }
+    }
+
+    this.setData({ color })
+  }
+}
+
 
 class Portal extends Phaser.GameObjects.Graphics {
   constructor(scene, origin)
@@ -144,6 +315,7 @@ class Portal extends Phaser.GameObjects.Graphics {
 
     // represents the path
     this.path = new Phaser.Curves.Path(origin.x, origin.y)
+    this.towers = new Phaser.GameObjects.Group(scene)
     // represents the spawner (currently a square at the end of the line)
     // this.icon = undefined
     // spawned "monsters" are added to this group
@@ -185,13 +357,21 @@ class Portal extends Phaser.GameObjects.Graphics {
     this.plotPath(0)
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+      scene.add.existing(this.towers)
       scene.add.existing(this.monsters)
       scene.add.existing(this.particleManager)
+
+      // FIXME find a better place to add the towers to the scene
+      this.towers.getChildren().forEach(t => {
+        scene.add.existing(t)
+      })
+
       this.redraw()
     })
 
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
       this.path.destroy()
+      this.towers.destroy()
       this.monsters.destroy()
       this.particleManager.destroy()
     })
@@ -302,6 +482,20 @@ class Portal extends Phaser.GameObjects.Graphics {
     this.lineStyle(2, 0x333333, 1)
     this.path.draw(this)
 
+    // for (let i = 0; i < this.towerLocations.length; i++)
+    // {
+    //   const loc = this.towerLocations[i]
+
+    //   const color = loc.active ? 0x999999 : 0x111111
+    //   this.lineStyle(1, color, 1)
+    //   this.beginPath()
+    //   // this.moveTo(loc.origin.x, loc.origin.y)
+    //   // this.lineTo(loc.location.x, loc.location.y)
+    //   this.arc(loc.location.x, loc.location.y, 10, 0, Math.PI * 2)
+    //   this.closePath()
+    //   this.strokePath()
+    // }
+
     const state = this.getData('state')
     if (state !== Portal.States.BRANCHING)
     {
@@ -355,8 +549,8 @@ class Portal extends Phaser.GameObjects.Graphics {
       length = Phaser.Math.RND.between(50, 100)
       angle = (Phaser.Math.RND.realInRange(...angle))
 
-      const next = new Phaser.Math.Vector2()
-      next.copy(origin)
+      const next = new Phaser.Math.Vector2(origin)
+      // next.copy(origin)
       // console.log(`From ${next.x}, ${next.y} at ${angle} for ${length}`)
       next.setAngle(angle)
       next.setLength(length)
@@ -370,6 +564,7 @@ class Portal extends Phaser.GameObjects.Graphics {
     {
       let origin
       let previous
+      let hasTower = false
       if (this.path.curves.length === 0)
       {
         origin = this.path.getEndPoint()
@@ -379,9 +574,37 @@ class Portal extends Phaser.GameObjects.Graphics {
         const last = this.path.curves[this.path.curves.length - 1]
         origin = last.getEndPoint()
         previous = last.getStartPoint()
+        hasTower = true
       }
 
-      this.path.lineTo(nextPoint(origin, previous))
+      const point = nextPoint(origin, previous)
+      this.path.lineTo(point)
+
+
+      if (hasTower)
+      {
+        const angle = Phaser.Math.Angle.BetweenPoints(origin, previous)
+        const location = new Phaser.Math.Vector2(origin)
+        const halfPI = Math.PI / 2
+
+        if (angle > -halfPI && angle < halfPI)
+        {
+          location.setAngle(angle - halfPI)
+        }
+        else
+        {
+          location.setAngle(angle + halfPI)
+        }
+
+        location.setLength(20)
+        location.add(origin)
+
+        const tower = new Tower(this.scene, location.x, location.y)
+        tower.setData('origin', origin.clone())
+
+        this.scene.towers.add(tower)
+        this.towers.add(tower)
+      }
     }
 
     // Once the path is complete reverse it, as the followers need to go toward the center
@@ -414,9 +637,10 @@ class Game extends Phaser.Scene {
   {
     const { width, height } = this.sys.game.canvas
 
-    this.events.off(GameEvents.PORTAL_EXPIRED)
+    // handle portal events
+    this.events.off()
 
-    // if all portals have expired; open the portal
+    // if all portals have expired; open the level portal
     let complete = false
     this.events.on(GameEvents.PORTAL_EXPIRED, portal => {
       const portals = this.portals.getChildren()
@@ -434,6 +658,36 @@ class Game extends Phaser.Scene {
         }
       }
     })
+
+    // tower events
+    let towerUI = null
+    this.input.on('pointerdown', () => {
+      if (towerUI)
+      {
+        towerUI.destroy()
+        towerUI = null
+      }
+    })
+
+    this.events.on(GameEvents.TOWER_SELECT, tower => {
+      if (towerUI != null)
+      {
+        towerUI.destroy()
+        towerUI = null
+      }
+
+      towerUI = new TowerUI(this, tower)
+      this.add.existing(towerUI)
+    })
+
+    this.events.on(GameEvents.TOWER_BUILD, (tower, type) => {
+      if (towerUI)
+      {
+        towerUI.destroy()
+      }
+
+      tower.build(type)
+    })
   }
 
   preload()
@@ -449,8 +703,8 @@ class Game extends Phaser.Scene {
     this.bindings = this.input.keyboard.addKeys({
       ACCELERATE: 'W',
       DECELERATE: 'S',
-      STRAFE_RIGHT: 'A',
-      STRAFE_LEFT: 'D',
+      STRAFE_RIGHT: 'D',
+      STRAFE_LEFT: 'A',
       ACCELERATE_ALT: 'UP',
       DECELERATE_ALT: 'DOWN',
       STRAFE_RIGHT_ALT: 'RIGHT',
@@ -464,9 +718,10 @@ class Game extends Phaser.Scene {
     this.projectiles = this.physics.add.group()
 
     this.portals = this.add.group()
+    this.towers = this.add.group()
     this.monsters = this.physics.add.group()
 
-    const PORTAL_COUNT = 5
+    const PORTAL_COUNT = 6
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
       const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
@@ -490,12 +745,12 @@ class Game extends Phaser.Scene {
     this.playerShip.rotation = nextAngle
     this.debugText.setText(`${this.playerShip.rotation.toFixed(2)}, ${this.playerShip.body.velocity.x.toFixed(2)}, ${this.playerShip.body.velocity.y.toFixed(2)}`)
 
+    // handle player controls
     let firing = false
     if (pointer.isDown && pointer.button === 0)
     {
       this.playerShip.fire()
     }
-
 
     let acceleration = { x: 0, y: 0 }
 
@@ -522,6 +777,42 @@ class Game extends Phaser.Scene {
     }
 
     this.playerShip.body.setAcceleration(acceleration.x, acceleration.y)
+
+    const ACTIVATION_RANGE = 75
+    const towers = this.towers.getChildren()
+    const inRange = []
+    const closest = {
+      distance: undefined,
+      tower: undefined
+    }
+
+    towers.forEach(tower => {
+      const towerActivated = tower.getData('active')
+      if (towerActivated)
+      {
+        // deactivate the tower, in case it is no longer the closest
+        // prevent the "changedata-active" event being handled on all
+        // towers by only changing the previously active tower
+        tower.setData('active', false)
+      }
+
+      const distance = Phaser.Math.Distance.BetweenPoints(this.playerShip, tower)
+      if (distance < ACTIVATION_RANGE)
+      {
+        if (closest.tower == null || closest.distance > distance)
+        {
+          closest.tower = tower
+          closest.distance = distance
+        }
+
+        inRange.push(tower)
+      }
+    })
+
+    if (closest.tower)
+    {
+      closest.tower.setData('active', true)
+    }
   }
 }
 
