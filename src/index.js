@@ -1,28 +1,12 @@
 'use strict'
 
-import Phaser from 'phaser';
+import Phaser from 'phaser'
+import Tower from './tower'
+import Projectile from './projectile'
+import GameEvents from './events'
 
 const UI_DEPTH = 1000
 const PLAYER_DEPTH = 100
-
-const GameEvents = {
-  PORTAL_EXPIRED: 'portal:expired',
-  MONSTER_KILLED: 'monster:killed',
-  TOWER_SELECT: 'tower:select',
-  TOWER_BUILD: 'tower:build',
-}
-
-class Projectile extends Phaser.GameObjects.Arc {
-  constructor(scene, x, y, radius)
-  {
-    super(scene, x, y, radius)
-    this.setFillStyle(0xBBBBBB, 1)
-
-    this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      // this.body.setVelocity(200, 200)
-    })
-  }
-}
 
 
 class Ship extends Phaser.GameObjects.Graphics {
@@ -30,6 +14,12 @@ class Ship extends Phaser.GameObjects.Graphics {
   {
     super(scene, { x, y })
     this.setDepth(PLAYER_DEPTH)
+
+    this.setData({
+      damage: 1,
+      damageMultiplier: 1,
+      bulletSpeed: 200,
+    })
 
     // Draw sprite
     this.lineStyle(2, 0x662266, 1)
@@ -51,10 +41,14 @@ class Ship extends Phaser.GameObjects.Graphics {
 
   fire()
   {
-    const p = new Projectile(this.scene, this.x, this.y, 2)
+    const p = new Projectile(this.scene, this.x, this.y, {
+      baseSpeed: this.getData('bulletSpeed'),
+      damage: this.getData('damage') * this.getData('damageMultiplier'),
+    })
     this.scene.projectiles.add(p, true)
     this.projectiles.add(p)
-    this.scene.physics.velocityFromRotation(this.rotation, 200, p.body.velocity)
+
+    this.scene.physics.velocityFromRotation(this.rotation, p.getData('speed'), p.body.velocity)
   }
 
   // preUpdate()
@@ -133,18 +127,65 @@ class Walker extends Phaser.GameObjects.Arc {
   }
 }
 
+class Button extends Phaser.GameObjects.Container {
+  constructor(scene, x, y, label, options)
+  {
+    super(scene, x, y)
+
+    this.label = new Phaser.GameObjects.Text(scene, 0, 0, label)
+    this.label.setOrigin(0.5, 0.5)
+    this.add(this.label)
+
+    if (typeof options === 'function')
+    {
+      options = {
+        onClick: options
+      }
+    }
+
+    const width = options.width || this.label.width + 8
+    const height = options.height || this.label.height + 4
+
+    this.border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
+    this.border.setStrokeStyle(1, 0x444444, 1)
+    this.add(this.border)
+
+    this.setSize(width, height)
+    this.setInteractive()
+
+    this.on('pointerdown', (pointer, localX, localY, event) => {
+      event.stopPropagation()
+      options.onClick(pointer, localX, localY, event)
+    })
+
+    this.on('pointerover', () => {
+      this.border.setStrokeStyle(1, 0x4444FF, 1)
+    })
+
+    this.on('pointerout', () => {
+      this.border.setStrokeStyle(1, 0x444444, 1)
+    })
+  }
+}
+
 class TowerUI extends Phaser.GameObjects.Container {
   constructor(scene, tower)
   {
     super(scene, tower.x, tower.y)
     this.setDepth(UI_DEPTH)
-    this.setSize(64, 64)
+
+    const width = 184
+    const height = 64
+
+    this.setSize(width, height)
     this.setInteractive()
 
     this.tower = tower
 
-    this.gfx = new Phaser.GameObjects.Graphics(scene, { x: -32, y: -32 })
-    this.add(this.gfx)
+    this.border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
+    this.border.setFillStyle(0x000000, 0.75)
+    this.border.setStrokeStyle(1, 0x444444, 1)
+    this.add(this.border)
 
     const towerTypes = [
       {
@@ -166,43 +207,41 @@ class TowerUI extends Phaser.GameObjects.Container {
         id: "damage4",
         name: "Damage 4",
         displayName: "4"
+      },
+      {
+        id: "damage4",
+        name: "Damage 5",
+        displayName: "5"
       }
     ]
 
     // buttons
     // this.buttons = []
-    let buttonX = 0
-    let buttonY = 0
+    const buttonWidth = 32
+    const buttonHeight = 26
+    let buttonX = -(width / 2) + (buttonWidth / 2) + 4
+    let buttonY = -(height / 2) + (buttonHeight / 2) + 4
     towerTypes.forEach((type, index) => {
-      buttonX = -19 + (index % 2 === 0 ? 4 : 34)
-      buttonY = -19 + (4 + (30 * Math.floor(index / 2)))
 
-      const rect = new Phaser.GameObjects.Rectangle(scene, buttonX, buttonY, 26, 26)
-      rect.setInteractive()
-      rect.setStrokeStyle(1, 0x444444, 1)
-
-      rect.on('pointerdown', (pointer, localX, localY, event) => {
-        event.stopPropagation()
-        this.scene.events.emit(GameEvents.TOWER_BUILD, this.tower, type.id)
+      const btn = new Button(scene, buttonX, buttonY, type.displayName, {
+        width: buttonWidth,
+        height: buttonHeight,
+        onClick: (pointer, localX, localY, event) => {
+          this.scene.events.emit(GameEvents.TOWER_BUILD, this.tower, type.id)
+        }
       })
+      this.add(btn)
 
-      rect.on('pointerover', () => {
-        rect.setStrokeStyle(1, 0x4444FF, 1)
-      })
-
-      rect.on('pointerout', () => {
-        rect.setStrokeStyle(1, 0x444444, 1)
-      })
-
-      this.add(rect)
-
-      const label = new Phaser.GameObjects.Text(scene, buttonX, buttonY, type.displayName)
-      label.setOrigin(0.5, 0.5)
-      this.add(label)
+      buttonX += buttonWidth + 4
     })
 
+    // Cancel button
+    const cancelButton = new Button(scene, 0, 16, "Cancel", () => {
+      this.scene.events.emit(GameEvents.TOWER_BUILD_CANCEL)
+    })
+    this.add(cancelButton)
+
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      this.draw()
     })
 
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
@@ -211,85 +250,14 @@ class TowerUI extends Phaser.GameObjects.Container {
     this.on('pointerdown', (pointer, localX, localY, event) => {
       event.stopPropagation()
     })
-  }
 
-  draw(overX, overY)
-  {
-    this.gfx.clear()
-
-    this.gfx.setDepth(UI_DEPTH + 1)
-    this.gfx.lineStyle(1, 0x444444, 1)
-    this.gfx.fillStyle(0x000000, 0.8)
-    this.gfx.fillRect(0, 0, 64, 64)
-    this.gfx.strokeRect(0, 0, 64, 64)
-  }
-}
-
-class Tower extends Phaser.GameObjects.Container {
-  constructor(scene, x, y)
-  {
-    super(scene, x, y)
-    this.setSize(16, 16)
-    this.setInteractive()
-
-    const defaultColor = 0x111111
-    this.setData({
-      active: false,
-      color: defaultColor,
+    this.on('pointerover', (pointer, localX, localY, event) => {
+      // this.border.setStrokeStyle(1, 0xFFFFFF, 1)
     })
 
-    const arc = new Phaser.GameObjects.Arc(scene, 0, 0, 8)
-    arc.setStrokeStyle(2, defaultColor, 1)
-    this.add(arc)
-
-    this.on('pointerdown', (pointer, x, y, event) => {
-      event.stopPropagation()
-      this.scene.events.emit(GameEvents.TOWER_SELECT, this)
+    this.on('pointerout', (pointer, localX, localY, event) => {
+      // this.border.setStrokeStyle(1, 0x444444, 1)
     })
-
-
-    const selectionArc = new Phaser.GameObjects.Arc(scene, 0, 0, 14)
-    selectionArc.setStrokeStyle(2, 0xDDDDDD, 1)
-    selectionArc.setVisible(false)
-    this.add(selectionArc)
-
-    this.on('changedata-color', (obj, val, previous) => {
-      arc.setStrokeStyle(2, val, 1)
-    })
-
-    this.on('changedata-active', (obj, val, previous) => {
-      selectionArc.setVisible(val)
-    })
-  }
-
-  build(type)
-  {
-    let color = undefined
-    switch (type)
-    {
-      case 'damage1':
-      {
-        color = 0xFF0000
-        break
-      }
-      case 'damage2':
-      {
-        color = 0x0000FF
-        break
-      }
-      case 'damage3':
-      {
-        color = 0xFFFF00
-        break
-      }
-      case 'damage4':
-      {
-        color = 0xFF9800
-        break
-      }
-    }
-
-    this.setData({ color })
   }
 }
 
@@ -601,6 +569,10 @@ class Game extends Phaser.Scene {
   {
     const { width, height } = this.sys.game.canvas
 
+    this.data.set({
+      speed: 1 // game speed
+    })
+
     // handle portal events
     this.events.off()
 
@@ -640,8 +612,13 @@ class Game extends Phaser.Scene {
         towerUI = null
       }
 
-      towerUI = new TowerUI(this, tower)
-      this.add.existing(towerUI)
+      // Cannot build two weapons
+      // TODO upgrade
+      if (!tower.weapon)
+      {
+        towerUI = new TowerUI(this, tower)
+        this.add.existing(towerUI)
+      }
     })
 
     this.events.on(GameEvents.TOWER_BUILD, (tower, type) => {
@@ -651,6 +628,13 @@ class Game extends Phaser.Scene {
       }
 
       tower.build(type)
+    })
+
+    this.events.on(GameEvents.TOWER_BUILD_CANCEL, (tower, type) => {
+      if (towerUI)
+      {
+        towerUI.destroy()
+      }
     })
   }
 
@@ -707,7 +691,7 @@ class Game extends Phaser.Scene {
     const targetAngle = Phaser.Math.Angle.BetweenPoints(this.playerShip, pointer)
     const nextAngle = Phaser.Math.Angle.RotateTo(this.playerShip.rotation, targetAngle, 0.1)
     this.playerShip.rotation = nextAngle
-    this.debugText.setText(`${this.playerShip.rotation.toFixed(2)}, ${this.playerShip.body.velocity.x.toFixed(2)}, ${this.playerShip.body.velocity.y.toFixed(2)}`)
+    this.debugText.setText(`${this.playerShip.rotation.toFixed(2)}, ${this.playerShip.body.velocity.x.toFixed(2)}, ${this.playerShip.body.velocity.y.toFixed(2)}, ${this.projectiles.getChildren().length}`)
 
     // handle player controls
     let firing = false
