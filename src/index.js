@@ -222,20 +222,6 @@ class TowerUI extends Phaser.GameObjects.Container {
     this.gfx.fillStyle(0x000000, 0.8)
     this.gfx.fillRect(0, 0, 64, 64)
     this.gfx.strokeRect(0, 0, 64, 64)
-
-    // let x = 0
-    // let y = 0
-    // for (let box = 0; box < 4; box++)
-    // {
-    //   x = box % 2 === 0 ? 4 : 34
-    //   y = 4 + (30 * Math.floor(box / 2))
-
-    //   const rect = new Phaser.Geom.Rectangle(x, y, 26, 26)
-
-    //   const isOver = Phaser.Geom.Rectangle.Contains(rect, overX, overY)
-    //   this.gfx.lineStyle(1, isOver ? 0x111111 : 0x444444, 1)
-    //   this.gfx.strokeRect(rect.x, rect.y, rect.width, rect.height)
-    // }
   }
 }
 
@@ -482,20 +468,6 @@ class Portal extends Phaser.GameObjects.Graphics {
     this.lineStyle(2, 0x333333, 1)
     this.path.draw(this)
 
-    // for (let i = 0; i < this.towerLocations.length; i++)
-    // {
-    //   const loc = this.towerLocations[i]
-
-    //   const color = loc.active ? 0x999999 : 0x111111
-    //   this.lineStyle(1, color, 1)
-    //   this.beginPath()
-    //   // this.moveTo(loc.origin.x, loc.origin.y)
-    //   // this.lineTo(loc.location.x, loc.location.y)
-    //   this.arc(loc.location.x, loc.location.y, 10, 0, Math.PI * 2)
-    //   this.closePath()
-    //   this.strokePath()
-    // }
-
     const state = this.getData('state')
     if (state !== Portal.States.BRANCHING)
     {
@@ -531,12 +503,6 @@ class Portal extends Phaser.GameObjects.Graphics {
       // Angle for first plot of random
       if (previous == null)
       {
-        // right
-        // angle = [.5, -.5]
-        // left
-        // angle = [Math.PI-.5, Math.PI+.5]
-
-        // real
         angle = [-Math.PI, Math.PI]
       }
       else
@@ -550,7 +516,6 @@ class Portal extends Phaser.GameObjects.Graphics {
       angle = (Phaser.Math.RND.realInRange(...angle))
 
       const next = new Phaser.Math.Vector2(origin)
-      // next.copy(origin)
       // console.log(`From ${next.x}, ${next.y} at ${angle} for ${length}`)
       next.setAngle(angle)
       next.setLength(length)
@@ -579,7 +544,6 @@ class Portal extends Phaser.GameObjects.Graphics {
 
       const point = nextPoint(origin, previous)
       this.path.lineTo(point)
-
 
       if (hasTower)
       {

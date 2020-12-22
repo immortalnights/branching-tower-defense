@@ -1,4 +1,8 @@
 // publish to GitHub pages
 const ghpages = require('gh-pages')
 
-ghpages.publish('dist', function(err) {})
+ghpages.publish('dist', {
+    remote: 'origin'
+  }, function(err) {
+  console.error("Failed", err)
+})
