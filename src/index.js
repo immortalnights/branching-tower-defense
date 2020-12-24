@@ -76,7 +76,7 @@ class Walker extends Phaser.GameObjects.Arc {
 
     this.setData({
       state: MonsterStates.ALIVE,
-      coreDamagePerSecond: '',
+      stabilityDamage: 2,
       attackPlayer: false,
     })
 
@@ -94,6 +94,18 @@ class Walker extends Phaser.GameObjects.Arc {
             {
               this.emitter.remove()
             }
+
+            let stability = scene.exitPortal.getData('stability')
+            if (this.getData('state') === MonsterStates.DEAD)
+            {
+              stability += this.getData('stabilityDamage')
+            }
+            else
+            {
+              stability -= this.getData('stabilityDamage')
+            }
+
+            scene.exitPortal.setData('stability', Phaser.Math.Clamp(stability, -100, 100))
 
             // TODO monsters don't die when reaching the core, they attack it
             // causing core damage per second
@@ -260,10 +272,10 @@ class Portal extends Phaser.GameObjects.Graphics {
     // TODO pick better wave / monster counts
     this.setData({
       state: PortalStates.WAVE_COUNTDOWN,
-      points: 3, // 6
+      points: 8,
       threat: "Unknown",
       // total waves
-      totalWaves: 2,
+      totalWaves: 6,
       // total monsters
       totalMonsters: 12,
       // wave count
@@ -271,7 +283,7 @@ class Portal extends Phaser.GameObjects.Graphics {
       // next wave time (would not be set by default)
       nextWaveAt: scene.game.getTime() + 3000,
       // monsters per wave
-      waveMonsters: 1, // 6
+      waveMonsters: 100,
       // monsters spawned this wave
       spawnedForWave: 0,
       // total monsters spawned
@@ -594,10 +606,10 @@ class ExitPortal extends Phaser.GameObjects.Triangle {
     this.on('pointerdown', (pointer, localX, localY, event) => {
       event.stopPropagation()
 
-      const portals = this.portals.getChildren()
-      if (portals.every(p => p.getData('state', PortalStates.EXPIRED)))
+      const portals = this.scene.portals.getChildren()
+      if (portals.every(p => p.getData('state') === PortalStates.EXPIRED))
       {
-        this.scene.restart({})
+        this.scene.scene.restart({})
       }
     })
   }
@@ -691,7 +703,7 @@ class Game extends Phaser.Scene {
       // hud.destroy()
     // })
 
-    const PORTAL_COUNT = 1
+    const PORTAL_COUNT = 6
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
       const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
@@ -704,7 +716,7 @@ class Game extends Phaser.Scene {
         monster.takeDamage(projectile.getData('damage'))
         projectile.destroy()
       }
-    })
+    }, (projectile, monster) => monster.isAlive())
 
     // Launch the UI scene once all the game objects are initialized
     this.scene.launch('ui')

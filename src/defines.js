@@ -23,6 +23,7 @@ const PortalStates = {
   BRANCHING: 'branching',
   WAVE_COUNTDOWN: 'countdown',
   SPAWNING: 'spawning',
+  WAVE_COOLDOWN: 'cooldown',
   EXPIRED: 'expired'
 }
 
