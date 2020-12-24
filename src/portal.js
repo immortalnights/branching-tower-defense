@@ -5,6 +5,8 @@ import Tower from './tower'
 import Walker from './enemies/walker'
 import { GameEvents, PortalStates } from './defines'
 
+const PortalActiveStates = [PortalStates.WAVE_COUNTDOWN, PortalStates.SPAWNING, PortalStates.WAVE_COOLDOWN]
+
 
 export default class Portal extends Phaser.GameObjects.Graphics {
   constructor(scene, origin)
@@ -36,15 +38,15 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       points: 8,
       threat: "Unknown",
       // total waves
-      totalWaves: 6,
+      totalWaves: 1,
       // total monsters
       totalMonsters: 12,
       // wave count
       wave: 0,
       // next wave time (would not be set by default)
-      nextWaveAt: scene.game.getTime() + 3000,
+      nextWaveAt: scene.game.getTime() + (3000 * Math.random()),
       // monsters per wave
-      waveMonsters: 100,
+      waveMonsters: 5,
       // monsters spawned this wave
       spawnedForWave: 0,
       // total monsters spawned
@@ -58,6 +60,8 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       scene.add.existing(this.towers)
       scene.add.existing(this.monsters)
       scene.add.existing(this.particleManager)
+
+      scene.events.emit(GameEvents.PORTAL_ACTIVATED, this)
 
       // FIXME find a better place to add the towers to the scene
       this.towers.getChildren().forEach(t => {
@@ -73,6 +77,11 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       this.monsters.destroy()
       this.particleManager.destroy()
     })
+  }
+
+  isAlive()
+  {
+    return this.active && PortalActiveStates.includes(this.state)
   }
 
   preUpdate(time, delta)
@@ -158,6 +167,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
           {
             console.log("Portal has expired")
             this.setState(PortalStates.EXPIRED)
+            this.emit(GameEvents.PORTAL_EXPIRED, this)
             this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
             this.redraw()
           }

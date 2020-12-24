@@ -12,6 +12,7 @@ const DefaultKeys = {
 }
 
 const GameEvents = {
+  PORTAL_ACTIVATED: 'expired',
   PORTAL_EXPIRED: 'portal:expired',
   MONSTER_KILLED: 'monster:killed',
   TOWER_SELECT: 'tower:select',

@@ -1,7 +1,8 @@
 'use strict'
 
 import Phaser from 'phaser'
-import PortalOverviewUI from './portaloverviewui'
+import PortalStability from './portalstability'
+import PortalOverview from './portaloverview'
 import { GameEvents } from '../defines'
 
 
@@ -50,8 +51,11 @@ export default class HUD extends Phaser.Scene {
       sceneEventHandlers[GameEvents.TOWER_BUILD_CLOSE]()
     })
 
-    const portalOverview = new PortalOverviewUI(this, width / 2, height - height / 5)
+    const portalOverview = new PortalOverview(this, width / 2, height - 200)
     this.add.existing(portalOverview)
+
+    const portalStability = new PortalStability(this, width / 2, height - 100)
+    this.add.existing(portalStability)
 
     const eventNames = Object.keys(sceneEventHandlers)
     eventNames.forEach(name => this.events.on(name, sceneEventHandlers[name]))

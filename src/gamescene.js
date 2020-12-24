@@ -84,7 +84,7 @@ export default class Game extends Phaser.Scene {
       // hud.destroy()
     // })
 
-    const PORTAL_COUNT = 6
+    const PORTAL_COUNT = 2
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
       const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))

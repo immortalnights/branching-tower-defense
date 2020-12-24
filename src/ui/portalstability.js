@@ -2,7 +2,7 @@
 
 import Phaser from 'phaser'
 
-export default class PortalOverviewUI extends Phaser.GameObjects.Container {
+export default class PortalStability extends Phaser.GameObjects.Container {
   constructor(scene, x, y)
   {
     super(scene, x, y)
@@ -87,7 +87,7 @@ export default class PortalOverviewUI extends Phaser.GameObjects.Container {
 
       this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
         exitPortal.off('changedata-stability')
-      })      
+      })
     })
   }
 }
