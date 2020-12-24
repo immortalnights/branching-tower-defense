@@ -18,22 +18,22 @@ export default class PortalOverviewUI extends Phaser.GameObjects.Container {
     this.border.setStrokeStyle(1, 0x111111, 1)
     this.add(this.border)
 
-    const label = new Phaser.GameObjects.Text(scene, 0, -(height / 2) + 5, "Stability")
+    const label = new Phaser.GameObjects.Text(scene, 0, -(height / 2) + 5, "Portal Stability")
     label.setOrigin(0.5, 0)
     this.add(label)
 
     const barMaxWidth = width - 20
     const barMinWidth = 10
-    const barHeight = 28
-    const stabilityBarBorder = new Phaser.GameObjects.Rectangle(scene, 0, 5, barMaxWidth + 8, barHeight + 8)
+    const barHeight = 20
+    const stabilityBarBorder = new Phaser.GameObjects.Rectangle(scene, 0, -2, barMaxWidth, barHeight + 8)
     stabilityBarBorder.setStrokeStyle(1, 0x444444, 1)
     this.add(stabilityBarBorder)
 
-    const stabilityBar = new Phaser.GameObjects.Rectangle(scene, 0, 5, barMinWidth, barHeight)
+    const stabilityBar = new Phaser.GameObjects.Rectangle(scene, 0, -2, barMinWidth, barHeight)
     stabilityBar.setFillStyle(0x444444, 0.9)
     this.add(stabilityBar)
 
-    const stabilityPercentage = new Phaser.GameObjects.Text(scene, 0, 5 + barHeight, "0%")
+    const stabilityPercentage = new Phaser.GameObjects.Text(scene, 0, barHeight + 2, "0%")
     stabilityPercentage.setOrigin(0.5, 0.5)
     this.add(stabilityPercentage)
 

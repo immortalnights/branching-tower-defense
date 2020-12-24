@@ -24,7 +24,7 @@ const PortalStates = {
   WAVE_COUNTDOWN: 'countdown',
   SPAWNING: 'spawning',
   WAVE_COOLDOWN: 'cooldown',
-  EXPIRED: 'expired'
+  EXPIRED: 'expired',
 }
 
 const MonsterStates = {
@@ -32,8 +32,16 @@ const MonsterStates = {
   DEAD: 'dead',
 }
 
+const DepthSort = {
+  UI: 1000,
+  PLAYER: 100,
+  EXIT_PORTAL: 85,
+  PORTAL: 80,
+}
+
 export {
   DefaultKeys,
+  DepthSort,
   GameEvents,
   PortalStates,
   MonsterStates,
