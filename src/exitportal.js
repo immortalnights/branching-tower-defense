@@ -19,7 +19,7 @@ export default class ExitPortal extends Phaser.GameObjects.Triangle {
       event.stopPropagation()
 
       const portals = this.scene.portals.getChildren()
-      if (portals.every(p => p.getData('state') === PortalStates.EXPIRED))
+      if (portals.every(p => p.state === PortalStates.EXPIRED))
       {
         this.scene.scene.restart({})
       }

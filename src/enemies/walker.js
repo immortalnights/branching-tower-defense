@@ -14,8 +14,8 @@ export default class Walker extends Phaser.GameObjects.Arc {
     this.setPath(path)
     this.setStrokeStyle(2, 0x662222, 1)
 
+    this.setState(MonsterStates.ALIVE)
     this.setData({
-      state: MonsterStates.ALIVE,
       stabilityDamage: 2,
       attackPlayer: false,
     })
@@ -36,7 +36,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
             }
 
             let stability = scene.exitPortal.getData('stability')
-            if (this.getData('state') === MonsterStates.DEAD)
+            if (this.state === MonsterStates.DEAD)
             {
               stability += this.getData('stabilityDamage')
             }
@@ -61,7 +61,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
 
   isAlive()
   {
-    return this.active && this.getData('state') !== MonsterStates.DEAD
+    return this.active && this.state !== MonsterStates.DEAD
   }
 
   takeDamage(amount)
@@ -71,7 +71,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
 
   kill()
   {
-    this.setData('state', MonsterStates.DEAD)
+    this.setState(MonsterStates.DEAD)
     this.emit(GameEvents.MONSTER_KILLED, this)
     this.setVisible(false)
   }

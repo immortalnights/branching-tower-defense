@@ -31,8 +31,8 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     })
 
     // TODO pick better wave / monster counts
+    this.setState(PortalStates.WAVE_COUNTDOWN)
     this.setData({
-      state: PortalStates.WAVE_COUNTDOWN,
       points: 8,
       threat: "Unknown",
       // total waves
@@ -77,7 +77,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
 
   preUpdate(time, delta)
   {
-    switch (this.getData('state'))
+    switch (this.state)
     {
       case PortalStates.BRANCHING:
       {
@@ -88,8 +88,8 @@ export default class Portal extends Phaser.GameObjects.Graphics {
         if (time > this.getData('nextWaveAt'))
         {
           const currentWave = this.getData('wave')
+          this.setState(PortalStates.SPAWNING)
           this.setData({
-            state: PortalStates.SPAWNING,
             wave: currentWave + 1,
             nextSpawnAt: time + 250,
             spawnedForWave: 0
@@ -129,8 +129,8 @@ export default class Portal extends Phaser.GameObjects.Graphics {
           }
           else
           {
+            this.setState(PortalStates.WAVE_COOLDOWN)
             this.setData({
-              state: PortalStates.WAVE_COOLDOWN,
               nextSpawnAt: 0
             })
 
@@ -149,15 +149,15 @@ export default class Portal extends Phaser.GameObjects.Graphics {
         {
           if (this.getData('wave') < this.getData('totalWaves'))
           {
+            this.setState(PortalStates.WAVE_COUNTDOWN)
             this.setData({
-              state: PortalStates.WAVE_COUNTDOWN,
               nextWaveAt: time + 3000
             })
           }
           else
           {
             console.log("Portal has expired")
-            this.setData('state', PortalStates.EXPIRED)
+            this.setState(PortalStates.EXPIRED)
             this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
             this.redraw()
           }
@@ -180,8 +180,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     this.lineStyle(2, 0x333333, 1)
     this.path.draw(this)
 
-    const state = this.getData('state')
-    if (state !== PortalStates.BRANCHING)
+    if (this.state !== PortalStates.BRANCHING)
     {
       const end = this.path.getStartPoint()
       const iconSize = 10
@@ -195,7 +194,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
         iconSize
       ]
 
-      if (state === PortalStates.EXPIRED)
+      if (this.state === PortalStates.EXPIRED)
       {
         this.strokeRect(...rect)
       }

@@ -31,26 +31,15 @@ export default class Game extends Phaser.Scene {
 
     this.ui = this.scene.get('ui').events
 
-    // if all portals have expired; open the level portal
-    let complete = false
-
     const sceneEventHandlers = {
       [GameEvents.PORTAL_EXPIRED]: portal => {
         const portals = this.portals.getChildren()
-        if (!complete)
+
+        // if all portals have expired; open the level portal
+        let complete = portals.every(p => p.state === PortalStates.EXPIRED)
+        if (complete)
         {
-          complete = portals.every(p => p.getData('state', PortalStates.EXPIRED))
-          if (complete)
-          {
-            this.exitPortal.setStrokeStyle(2, 0x228822, 1)
-            // const exitPortal = this.add.triangle(width / 2, height / 2, 0, 32, 16, 0, 32, 32)
-            // exitPortal.setStrokeStyle(2, 0x228822, 1)
-            // exitPortal.setInteractive()
-            // exitPortal.on('pointerdown', (pointer, localX, localY, event) => {
-            //   event.stopPropagation()
-            //   this.scene.restart({})
-            // })
-          }
+          this.exitPortal.setStrokeStyle(2, 0x228822, 1)
         }
       }
     }
