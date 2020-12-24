@@ -2,7 +2,7 @@
 
 import Phaser from 'phaser'
 import Projectile from './projectile'
-import GameEvents from './events'
+import { GameEvents } from './defines'
 
 class Weapon extends Phaser.GameObjects.Graphics {
   constructor(scene, x, y)
@@ -46,7 +46,7 @@ class Weapon extends Phaser.GameObjects.Graphics {
 
     const inRange = []
     others.forEach(obj => {
-      if (obj.active)
+      if (obj.isAlive())
       {
         const distance = Phaser.Math.Distance.BetweenPoints(this.parentContainer, obj)
 
@@ -144,9 +144,10 @@ class CannonWeapon extends Weapon {
     // May want it to change to the closest / weakest / etc for better logic.
     if (target)
     {
-      if (target.obj.active)
+      const obj = target.obj
+      if (obj.isAlive())
       {
-        const distance = Phaser.Math.Distance.BetweenPoints(this.parentContainer, target.obj)
+        const distance = Phaser.Math.Distance.BetweenPoints(this.parentContainer, obj)
         if (distance > this.getData('range'))
         {
           target = undefined
@@ -269,7 +270,7 @@ export default class Tower extends Phaser.GameObjects.Container {
 
     this.on('pointerdown', (pointer, x, y, event) => {
       event.stopPropagation()
-      this.scene.events.emit(GameEvents.TOWER_SELECT, this)
+      this.scene.ui.emit(GameEvents.TOWER_SELECT, this)
     })
 
     const selectionArc = new Phaser.GameObjects.Arc(scene, 0, 0, 14)

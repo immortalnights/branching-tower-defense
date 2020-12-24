@@ -3,17 +3,22 @@
 import Phaser from 'phaser'
 import Tower from './tower'
 import Projectile from './projectile'
-import GameEvents from './events'
+import Button from './button'
+import PortalOverviewUI from './portaloverviewui'
+import { DefaultKeys, GameEvents, PortalStates, MonsterStates } from './defines'
 
-const UI_DEPTH = 1000
-const PLAYER_DEPTH = 100
-
+const OBJ_DEPTH = {
+  UI: 1000,
+  PLAYER: 100,
+  EXIT_PORTAL: 85,
+  PORTAL: 80,
+}
 
 class Ship extends Phaser.GameObjects.Graphics {
   constructor(scene, x, y)
   {
     super(scene, { x, y })
-    this.setDepth(PLAYER_DEPTH)
+    this.setDepth(OBJ_DEPTH.PLAYER)
 
     this.setData({
       damage: 1,
@@ -70,7 +75,7 @@ class Walker extends Phaser.GameObjects.Arc {
     this.setStrokeStyle(2, 0x662222, 1)
 
     this.setData({
-      state: '',
+      state: MonsterStates.ALIVE,
       coreDamagePerSecond: '',
       attackPlayer: false,
     })
@@ -102,6 +107,11 @@ class Walker extends Phaser.GameObjects.Arc {
     })
   }
 
+  isAlive()
+  {
+    return this.active && this.getData('state') !== MonsterStates.DEAD
+  }
+
   takeDamage(amount)
   {
     this.kill()
@@ -109,6 +119,7 @@ class Walker extends Phaser.GameObjects.Arc {
 
   kill()
   {
+    this.setData('state', MonsterStates.DEAD)
     this.emit(GameEvents.MONSTER_KILLED, this)
     this.setVisible(false)
   }
@@ -127,52 +138,11 @@ class Walker extends Phaser.GameObjects.Arc {
   }
 }
 
-class Button extends Phaser.GameObjects.Container {
-  constructor(scene, x, y, label, options)
-  {
-    super(scene, x, y)
-
-    this.label = new Phaser.GameObjects.Text(scene, 0, 0, label)
-    this.label.setOrigin(0.5, 0.5)
-    this.add(this.label)
-
-    if (typeof options === 'function')
-    {
-      options = {
-        onClick: options
-      }
-    }
-
-    const width = options.width || this.label.width + 8
-    const height = options.height || this.label.height + 4
-
-    this.border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
-    this.border.setStrokeStyle(1, 0x444444, 1)
-    this.add(this.border)
-
-    this.setSize(width, height)
-    this.setInteractive()
-
-    this.on('pointerdown', (pointer, localX, localY, event) => {
-      event.stopPropagation()
-      options.onClick(pointer, localX, localY, event)
-    })
-
-    this.on('pointerover', () => {
-      this.border.setStrokeStyle(1, 0x4444FF, 1)
-    })
-
-    this.on('pointerout', () => {
-      this.border.setStrokeStyle(1, 0x444444, 1)
-    })
-  }
-}
 
 class TowerUI extends Phaser.GameObjects.Container {
   constructor(scene, tower)
   {
     super(scene, tower.x, tower.y)
-    this.setDepth(UI_DEPTH)
 
     const width = 184
     const height = 64
@@ -228,6 +198,7 @@ class TowerUI extends Phaser.GameObjects.Container {
         height: buttonHeight,
         onClick: (pointer, localX, localY, event) => {
           this.scene.events.emit(GameEvents.TOWER_BUILD, this.tower, type.id)
+          this.scene.events.emit(GameEvents.TOWER_BUILD_CLOSE)
         }
       })
       this.add(btn)
@@ -237,7 +208,7 @@ class TowerUI extends Phaser.GameObjects.Container {
 
     // Cancel button
     const cancelButton = new Button(scene, 0, 16, "Cancel", () => {
-      this.scene.events.emit(GameEvents.TOWER_BUILD_CANCEL)
+      this.scene.events.emit(GameEvents.TOWER_BUILD_CLOSE)
     })
     this.add(cancelButton)
 
@@ -288,8 +259,8 @@ class Portal extends Phaser.GameObjects.Graphics {
 
     // TODO pick better wave / monster counts
     this.setData({
-      state: Portal.States.WAVE_COUNTDOWN,
-      points: 6,
+      state: PortalStates.WAVE_COUNTDOWN,
+      points: 3, // 6
       threat: "Unknown",
       // total waves
       totalWaves: 2,
@@ -300,7 +271,7 @@ class Portal extends Phaser.GameObjects.Graphics {
       // next wave time (would not be set by default)
       nextWaveAt: scene.game.getTime() + 3000,
       // monsters per wave
-      waveMonsters: 6,
+      waveMonsters: 1, // 6
       // monsters spawned this wave
       spawnedForWave: 0,
       // total monsters spawned
@@ -335,17 +306,17 @@ class Portal extends Phaser.GameObjects.Graphics {
   {
     switch (this.getData('state'))
     {
-      case Portal.States.BRANCHING:
+      case PortalStates.BRANCHING:
       {
         break
       }
-      case Portal.States.WAVE_COUNTDOWN:
+      case PortalStates.WAVE_COUNTDOWN:
       {
         if (time > this.getData('nextWaveAt'))
         {
           const currentWave = this.getData('wave')
           this.setData({
-            state: Portal.States.SPAWNING,
+            state: PortalStates.SPAWNING,
             wave: currentWave + 1,
             nextSpawnAt: time + 250,
             spawnedForWave: 0
@@ -353,7 +324,7 @@ class Portal extends Phaser.GameObjects.Graphics {
         }
         break
       }
-      case Portal.States.SPAWNING:
+      case PortalStates.SPAWNING:
       {
         if (time > this.getData('nextSpawnAt'))
         {
@@ -386,7 +357,7 @@ class Portal extends Phaser.GameObjects.Graphics {
           else
           {
             this.setData({
-              state: Portal.States.WAVE_COOLDOWN,
+              state: PortalStates.WAVE_COOLDOWN,
               nextSpawnAt: 0
             })
 
@@ -399,21 +370,21 @@ class Portal extends Phaser.GameObjects.Graphics {
         }
         break
       }
-      case Portal.States.WAVE_COOLDOWN:
+      case PortalStates.WAVE_COOLDOWN:
       {
         if (this.monsters.getChildren().length == 0)
         {
           if (this.getData('wave') < this.getData('totalWaves'))
           {
             this.setData({
-              state: Portal.States.WAVE_COUNTDOWN,
+              state: PortalStates.WAVE_COUNTDOWN,
               nextWaveAt: time + 3000
             })
           }
           else
           {
             console.log("Portal has expired")
-            this.setData('state', Portal.States.EXPIRED)
+            this.setData('state', PortalStates.EXPIRED)
             this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
             this.redraw()
           }
@@ -423,7 +394,7 @@ class Portal extends Phaser.GameObjects.Graphics {
         }
         break
       }
-      case Portal.States.EXPIRED:
+      case PortalStates.EXPIRED:
       {
         break
       }
@@ -437,7 +408,7 @@ class Portal extends Phaser.GameObjects.Graphics {
     this.path.draw(this)
 
     const state = this.getData('state')
-    if (state !== Portal.States.BRANCHING)
+    if (state !== PortalStates.BRANCHING)
     {
       const end = this.path.getStartPoint()
       const iconSize = 10
@@ -451,7 +422,7 @@ class Portal extends Phaser.GameObjects.Graphics {
         iconSize
       ]
 
-      if (state === Portal.States.EXPIRED)
+      if (state === PortalStates.EXPIRED)
       {
         this.strokeRect(...rect)
       }
@@ -552,89 +523,139 @@ class Portal extends Phaser.GameObjects.Graphics {
   }
 }
 
-Portal.States = {
-  BRANCHING: 'branching',
-  WAVE_COUNTDOWN: 'countdown',
-  SPAWNING: 'spawning',
-  EXPIRED: 'expired'
+class HUD extends Phaser.Scene {
+  constructor(scene)
+  {
+    super({ ...config, key: 'ui' })
+  }
+
+  create()
+  {
+    // this.setDepth(OBJ_DEPTH.UI)
+
+    const { width, height } = this.sys.game.canvas
+
+    let towerUI = null
+    const sceneEventHandlers = {
+      // Tower UI events
+      [GameEvents.TOWER_BUILD_CLOSE]: () => {
+        if (towerUI)
+        {
+          // this.remove(towerUI)
+          towerUI.destroy()
+          towerUI = null
+        }
+      },
+
+      [GameEvents.TOWER_SELECT]: tower => {
+        sceneEventHandlers[GameEvents.TOWER_BUILD_CLOSE]()
+
+        // Cannot build two weapons
+        // TODO upgrade
+        if (!tower.weapon)
+        {
+          towerUI = new TowerUI(this, tower)
+          this.add.existing(towerUI)
+        }
+      },
+
+      [GameEvents.TOWER_BUILD]: (tower, type) => {
+        tower.build(type)
+      }
+    }
+
+    this.input.on('pointerdown', () => {
+      sceneEventHandlers[GameEvents.TOWER_BUILD_CLOSE]()
+    })
+
+    const portalOverview = new PortalOverviewUI(this, width / 2, height - height / 5)
+    this.add.existing(portalOverview)
+
+    const eventNames = Object.keys(sceneEventHandlers)
+    eventNames.forEach(name => this.events.on(name, sceneEventHandlers[name]))
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      eventNames.forEach(name => this.events.off(name))
+    })
+  }
 }
+
+
+class ExitPortal extends Phaser.GameObjects.Triangle {
+  constructor(scene, x, y)
+  {
+    super(scene, x, y, 0, 32, 16, 0, 32, 32)
+    this.setDepth(OBJ_DEPTH.EXIT_PORTAL)
+    this.setFillStyle(0x000000, 0.9)
+    this.setStrokeStyle(2, 0x111111, 1)
+
+    this.setData('stability', 0)
+
+    this.setInteractive()
+    this.on('pointerdown', (pointer, localX, localY, event) => {
+      event.stopPropagation()
+
+      const portals = this.portals.getChildren()
+      if (portals.every(p => p.getData('state', PortalStates.EXPIRED)))
+      {
+        this.scene.restart({})
+      }
+    })
+  }
+}
+
 
 class Game extends Phaser.Scene {
   constructor(config)
   {
-    super(config);
+    super({ ...config, key: 'game' })
   }
 
   init()
   {
     const { width, height } = this.sys.game.canvas
 
+    // Only need this event listener once
+    this.physics.world.on('worldbounds', obj => {
+      // Only objects with both `body.setCollideWorldBounds(true)` and `body.onWorldBounds = true` will call this event
+      // assume it's a projectile
+      obj.gameObject.destroy()
+    })
+
     this.data.set({
       speed: 1 // game speed
     })
 
-    // handle portal events
-    this.events.off()
+    this.ui = this.scene.get('ui').events
 
     // if all portals have expired; open the level portal
     let complete = false
-    this.events.on(GameEvents.PORTAL_EXPIRED, portal => {
-      const portals = this.portals.getChildren()
-      if (!complete)
-      {
-        complete = portals.every(p => p.getData('state', Portal.States.EXPIRED))
-        if (complete)
+
+    const sceneEventHandlers = {
+      [GameEvents.PORTAL_EXPIRED]: portal => {
+        const portals = this.portals.getChildren()
+        if (!complete)
         {
-          const exitPortal = this.add.triangle(width / 2, height / 2, 0, 32, 16, 0, 32, 32)
-          exitPortal.setStrokeStyle(2, 0x228822, 1)
-          exitPortal.setInteractive()
-          exitPortal.on('pointerup', () => {
-            this.scene.restart({})
-          })
+          complete = portals.every(p => p.getData('state', PortalStates.EXPIRED))
+          if (complete)
+          {
+            this.exitPortal.setStrokeStyle(2, 0x228822, 1)
+            // const exitPortal = this.add.triangle(width / 2, height / 2, 0, 32, 16, 0, 32, 32)
+            // exitPortal.setStrokeStyle(2, 0x228822, 1)
+            // exitPortal.setInteractive()
+            // exitPortal.on('pointerdown', (pointer, localX, localY, event) => {
+            //   event.stopPropagation()
+            //   this.scene.restart({})
+            // })
+          }
         }
       }
-    })
+    }
 
-    // tower events
-    let towerUI = null
-    this.input.on('pointerdown', () => {
-      if (towerUI)
-      {
-        towerUI.destroy()
-        towerUI = null
-      }
-    })
+    const eventNames = Object.keys(sceneEventHandlers)
 
-    this.events.on(GameEvents.TOWER_SELECT, tower => {
-      if (towerUI != null)
-      {
-        towerUI.destroy()
-        towerUI = null
-      }
-
-      // Cannot build two weapons
-      // TODO upgrade
-      if (!tower.weapon)
-      {
-        towerUI = new TowerUI(this, tower)
-        this.add.existing(towerUI)
-      }
-    })
-
-    this.events.on(GameEvents.TOWER_BUILD, (tower, type) => {
-      if (towerUI)
-      {
-        towerUI.destroy()
-      }
-
-      tower.build(type)
-    })
-
-    this.events.on(GameEvents.TOWER_BUILD_CANCEL, (tower, type) => {
-      if (towerUI)
-      {
-        towerUI.destroy()
-      }
+    eventNames.forEach(name => this.events.on(name, sceneEventHandlers[name]))
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      eventNames.forEach(name => this.events.off(name))
     })
   }
 
@@ -648,16 +669,7 @@ class Game extends Phaser.Scene {
     const { width, height } = this.sys.game.canvas
 
     // accelerate decelerate
-    this.bindings = this.input.keyboard.addKeys({
-      ACCELERATE: 'W',
-      DECELERATE: 'S',
-      STRAFE_RIGHT: 'D',
-      STRAFE_LEFT: 'A',
-      ACCELERATE_ALT: 'UP',
-      DECELERATE_ALT: 'DOWN',
-      STRAFE_RIGHT_ALT: 'RIGHT',
-      STRAFE_LEFT_ALT: 'LEFT',
-    })
+    this.bindings = this.input.keyboard.addKeys(DefaultKeys)
 
     this.playerShip = new Ship(this, 80, 80)
     this.physics.add.existing(this.playerShip)
@@ -665,11 +677,21 @@ class Game extends Phaser.Scene {
 
     this.projectiles = this.physics.add.group()
 
+    this.exitPortal = new ExitPortal(this, width / 2, height / 2 - 5)
+    this.add.existing(this.exitPortal)
+
     this.portals = this.add.group()
     this.towers = this.add.group()
     this.monsters = this.physics.add.group()
 
-    const PORTAL_COUNT = 6
+    // const hud = new HUD(this)
+    // this.add.existing(hud)
+    // this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+      // hud.removeAllListeners()
+      // hud.destroy()
+    // })
+
+    const PORTAL_COUNT = 1
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
       const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
@@ -677,10 +699,15 @@ class Game extends Phaser.Scene {
     }
 
     this.physics.add.collider(this.projectiles, this.monsters, (projectile, monster) => {
-      monster.takeDamage(projectile.getData('damage'))
-      projectile.destroy()
+      if (monster.isAlive())
+      {
+        monster.takeDamage(projectile.getData('damage'))
+        projectile.destroy()
+      }
     })
 
+    // Launch the UI scene once all the game objects are initialized
+    this.scene.launch('ui')
     this.debugText = this.add.text(0, 0, ``)
   }
 
@@ -769,7 +796,7 @@ const config = {
   type: Phaser.AUTO,
   width: 1024,
   height: 768,
-  scene: Game,
+  scene: [ Game, HUD ],
   seed: 1,
   physics: {
     default: 'arcade',
