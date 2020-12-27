@@ -2,7 +2,9 @@
 
 import Phaser from 'phaser'
 import Projectile from './projectile'
+import { ProjectileWeaponComponent, RateLimitedWeaponComponent } from './components/'
 import { GameEvents } from './defines'
+
 
 class Weapon extends Phaser.GameObjects.Graphics {
   constructor(scene, x, y)
@@ -107,21 +109,17 @@ class CannonWeapon extends Weapon {
   {
     super(container.scene, x, y)
 
-    // this.fireSprite = container.scene.add.arc(x, y, 2/*, 0, Math.PI * 2*/)
-    // this.fireSprite.setDepth(7)
-    // this.fireSprite.setVisible(false)
-
-    // container.add(this)
-    // container.add(this.fireSprite)
+    Object.assign(this, ProjectileWeaponComponent)
+    Object.assign(this, RateLimitedWeaponComponent)
 
     this.setData({
       range: 50,
-      // One shot every two seconds
-      rateOfFire: 0.5,
       rotationSpeed: 0.25,
-      bulletSpeed: 400,
-      damage: 10,
     })
+    this.setProjectileOrigin(container.x, container.y)
+    this.setProjectileDamage(1)
+    this.setRateOfFire(0.5)
+    this.setProjectileSpeed(400)
   }
 
   draw()
@@ -185,25 +183,9 @@ class CannonWeapon extends Weapon {
       const angleDifference = this.rotation - Phaser.Math.Angle.Wrap(angleToTarget)
       if (target.distance < this.getData('range') && (angleDifference < 0.08 && angleDifference > -0.08))
       {
-        if (this.canFire(time))
-        {
-          this.fire(target.obj, delta)
-          this.setNextFireTime(time)
-        }
+        this.tryFire(target.obj, time, delta)
       }
     }
-
-    // if (this.fireSprite.visible)
-    // {
-    //   let life = this.fireSprite.getData('life')
-    //   life = life - (100 * (delta / 1000))
-    //   this.fireSprite.setData('life', life)
-
-    //   if (life < 0)
-    //   {
-    //     this.fireSprite.setVisible(false)
-    //   }
-    // }
   }
 
   rotateToTarget(target)
@@ -212,42 +194,7 @@ class CannonWeapon extends Weapon {
     const nextRotation = Phaser.Math.Angle.RotateTo(this.rotation, angleToTarget, this.getData('rotationSpeed'))
     this.rotation = nextRotation;
 
-    // if (this.fireSprite.visible)
-    // {
-    //   const center = { x: this.parentContainer.x, y: this.parentContainer.y }
-    //   const rad = this.rotation + Math.PI / 2
-    //   const point = { x: center.x, y: center.y }
-    //   Phaser.Math.RotateAroundDistance(point, center.x, center.y, rad, 20);
-
-    //   this.fireSprite.rotation = this.rotation
-    //   this.fireSprite.setPosition(this.parentContainer.x - point.x, this.parentContainer.y - point.y)
-    // }
-
     return angleToTarget
-  }
-
-  fire(target, delta)
-  {
-    // center of the gun
-    const center = { x: this.parentContainer.x, y: this.parentContainer.y }
-    // angle between gun and pointer
-    const rad = this.rotation - this.spriteRotationOffset
-    const point = { x: center.x, y: center.y }
-    // offset the start point of the bullet based on the rotation
-    Phaser.Math.RotateAroundDistance(point, center.x, center.y, rad, 20);
-
-    // this.fireSprite.setVisible(true)
-    // this.fireSprite.setData('life', 10)
-
-    // spawn the bullet
-    const bullet = new Projectile(this.scene, point.x, point.y, {
-      baseSpeed: this.getData('bulletSpeed'),
-      damage: this.getData('damage') * this.getData('damageMultiplier'),
-    })
-    this.scene.projectiles.add(bullet, true)
-
-    // set the velocity based on the rotation
-    this.scene.physics.velocityFromRotation(rad, bullet.getData('speed'), bullet.body.velocity)
   }
 }
 
@@ -297,39 +244,37 @@ export default class Tower extends Phaser.GameObjects.Container {
 
   build(type)
   {
-    let color = undefined
-    switch (type)
+    // console.log("type", type)
+    this.setData({ color: type.color })
+
+    let className = CannonWeapon
+    switch (type.id)
     {
-      case 'damage1':
+      case 'Thermal':
       {
-        color = 0xFF0000
         break
       }
-      case 'damage2':
+      case 'Electrical':
       {
-        color = 0x0000FF
         break
       }
-      case 'damage3':
+      case 'Cold':
       {
-        color = 0xFFFF00
         break
       }
-      case 'damage4':
+      case 'Corrosive':
       {
-        color = 0xFF9800
         break
       }
-      case 'damage5':
+      case 'Enhancer':
       {
-        color = 0X00BCD4
         break
       }
     }
 
-    this.setData({ color })
+    console.assert(className, `Failed to identify tower class from type '${type.id}'`)
 
-    this.weapon = new CannonWeapon(this, 0, 0)
+    this.weapon = new (className)(this, 0, 0)
     this.add(this.weapon)
   }
 }

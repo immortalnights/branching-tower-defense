@@ -14,9 +14,11 @@ export default class Game extends Phaser.Scene {
     super({ ...config, key: 'game' })
   }
 
-  init()
+  init(options)
   {
     const { width, height } = this.sys.game.canvas
+
+    console.log(options)
 
     // Only need this event listener once
     this.physics.world.on('worldbounds', obj => {
@@ -32,6 +34,9 @@ export default class Game extends Phaser.Scene {
     this.ui = this.scene.get('ui').events
 
     const sceneEventHandlers = {
+      [GameEvents.EXIT_PORTAL_ACTIVATED]: exitPortal => {
+        this.scene.restart({})
+      },
       [GameEvents.PORTAL_EXPIRED]: portal => {
         const portals = this.portals.getChildren()
 
@@ -64,7 +69,7 @@ export default class Game extends Phaser.Scene {
     // accelerate decelerate
     this.bindings = this.input.keyboard.addKeys(DefaultKeys)
 
-    this.playerShip = new Ship(this, 80, 80)
+    this.playerShip = new Ship(this, width / 2 - 100, height / 2)
     this.physics.add.existing(this.playerShip)
     this.add.existing(this.playerShip)
 
@@ -76,13 +81,6 @@ export default class Game extends Phaser.Scene {
     this.portals = this.add.group()
     this.towers = this.add.group()
     this.monsters = this.physics.add.group()
-
-    // const hud = new HUD(this)
-    // this.add.existing(hud)
-    // this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
-      // hud.removeAllListeners()
-      // hud.destroy()
-    // })
 
     const PORTAL_COUNT = 2
     for (let i = 0; i < PORTAL_COUNT; i++)
@@ -104,7 +102,7 @@ export default class Game extends Phaser.Scene {
     this.debugText = this.add.text(0, 0, ``)
   }
 
-  update()
+  update(time, delta)
   {
     const pointer = this.input.activePointer
 
@@ -117,7 +115,7 @@ export default class Game extends Phaser.Scene {
     let firing = false
     if (pointer.isDown && pointer.button === 0)
     {
-      this.playerShip.fire()
+      this.playerShip.tryFire(pointer, time, delta)
     }
 
     let acceleration = { x: 0, y: 0 }
@@ -146,6 +144,11 @@ export default class Game extends Phaser.Scene {
 
     this.playerShip.body.setAcceleration(acceleration.x, acceleration.y)
 
+    // this.upateActiveTower()
+  }
+
+  updateActiveTower()
+  {
     const ACTIVATION_RANGE = 75
     const towers = this.towers.getChildren()
     const inRange = []

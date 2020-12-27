@@ -2,7 +2,8 @@
 
 import Phaser from 'phaser'
 import Button from './button'
-
+import { DefaultKeys, GameEvents } from '../defines'
+import towerTypes from '../towers.json'
 
 export default class TowerUI extends Phaser.GameObjects.Container {
   constructor(scene, tower)
@@ -15,6 +16,19 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     this.setSize(width, height)
     this.setInteractive()
 
+    const bindings = this.scene.input.keyboard.addKeys({
+      close: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.CLOSE_DIALOG],
+      buildThermal: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.BUILD_THERMAL],
+      buildElectrical: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.BUILD_ELECTRICAL],
+      buildCold: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.BUILD_COLD],
+      buildCorrosive: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.BUILD_CORROSIVE],
+      buildEnhancer: Phaser.Input.Keyboard.KeyCodes[DefaultKeys.BUILD_ENHANCER],
+    })
+
+    bindings.close.on('up', () => {
+      this.scene.events.emit(GameEvents.TOWER_BUILD_CLOSE)
+    })
+
     this.tower = tower
 
     this.border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
@@ -22,33 +36,10 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     this.border.setStrokeStyle(1, 0x444444, 1)
     this.add(this.border)
 
-    const towerTypes = [
-      {
-        id: "damage1",
-        name: "Damage 1",
-        displayName: "1"
-      },
-      {
-        id: "damage2",
-        name: "Damage 2",
-        displayName: "2"
-      },
-      {
-        id: "damage3",
-        name: "Damage 3",
-        displayName: "3"
-      },
-      {
-        id: "damage4",
-        name: "Damage 4",
-        displayName: "4"
-      },
-      {
-        id: "damage4",
-        name: "Damage 5",
-        displayName: "5"
-      }
-    ]
+    const onBuild = function(tower, type) {
+      this.events.emit(GameEvents.TOWER_BUILD, tower, type)
+      this.events.emit(GameEvents.TOWER_BUILD_CLOSE)
+    }
 
     // buttons
     // this.buttons = []
@@ -57,18 +48,22 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     let buttonX = -(width / 2) + (buttonWidth / 2) + 4
     let buttonY = -(height / 2) + (buttonHeight / 2) + 4
     towerTypes.forEach((type, index) => {
+      const towerOnBuild = onBuild.bind(this.scene, this.tower, { ...type })
 
       const btn = new Button(scene, buttonX, buttonY, type.displayName, {
         width: buttonWidth,
         height: buttonHeight,
         onClick: (pointer, localX, localY, event) => {
-          this.scene.events.emit(GameEvents.TOWER_BUILD, this.tower, type.id)
-          this.scene.events.emit(GameEvents.TOWER_BUILD_CLOSE)
+          towerOnBuild()
         }
       })
       this.add(btn)
 
       buttonX += buttonWidth + 4
+
+      bindings["build" + type.id].on('up', () => {
+        towerOnBuild()
+      })
     })
 
     // Cancel button
@@ -81,6 +76,9 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     })
 
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      Object.keys(bindings).forEach(name => {
+        bindings[name].off('up')
+      })
     })
 
     this.on('pointerdown', (pointer, localX, localY, event) => {

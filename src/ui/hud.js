@@ -1,6 +1,7 @@
 'use strict'
 
 import Phaser from 'phaser'
+import TowerConstructionMenu from './towerui'
 import PortalStability from './portalstability'
 import PortalOverview from './portaloverview'
 import { GameEvents } from '../defines'
@@ -37,7 +38,7 @@ export default class HUD extends Phaser.Scene {
         // TODO upgrade
         if (!tower.weapon)
         {
-          towerUI = new TowerUI(this, tower)
+          towerUI = new TowerConstructionMenu(this, tower)
           this.add.existing(towerUI)
         }
       },

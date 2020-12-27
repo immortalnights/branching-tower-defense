@@ -38,15 +38,21 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       points: 8,
       threat: "Unknown",
       // total waves
-      totalWaves: 1,
-      // total monsters
-      totalMonsters: 12,
+      totalWaves: 4,
+      // total monsters (remove?)
+      totalMonsters: 16,
+      // monsters per wave
+      waveMonsters: 6,
       // wave count
       wave: 0,
+      // time between each wave
+      waveDelay: (3000 * Math.random()),
+      // time between each monster
+      spawnDelay: 50,
       // next wave time (would not be set by default)
-      nextWaveAt: scene.game.getTime() + (3000 * Math.random()),
-      // monsters per wave
-      waveMonsters: 5,
+      nextWaveAt: 0,
+      // next monster spwan time
+      nextSpawnAt: 0,
       // monsters spawned this wave
       spawnedForWave: 0,
       // total monsters spawned
@@ -100,7 +106,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
           this.setState(PortalStates.SPAWNING)
           this.setData({
             wave: currentWave + 1,
-            nextSpawnAt: time + 250,
+            nextSpawnAt: time + this.getData('spawnDelay'),
             spawnedForWave: 0
           })
         }
@@ -126,6 +132,10 @@ export default class Portal extends Phaser.GameObjects.Graphics {
 
             obj.emitter.startFollow(obj)
           })
+
+          monster.once(Phaser.GameObjects.Events.DESTROY, () => {
+          })
+
           this.monsters.add(monster)
           this.scene.monsters.add(monster, true)
 
@@ -134,7 +144,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
 
           if (this.getData('spawnedForWave') < this.getData('waveMonsters'))
           {
-            this.setData('nextSpawnAt', time + 500)
+            this.setData('nextSpawnAt', time + this.getData('spawnDelay'))
           }
           else
           {
@@ -159,9 +169,12 @@ export default class Portal extends Phaser.GameObjects.Graphics {
           if (this.getData('wave') < this.getData('totalWaves'))
           {
             this.setState(PortalStates.WAVE_COUNTDOWN)
+
+            const nextWaveAt = time + this.getData('waveDelay')
             this.setData({
-              nextWaveAt: time + 3000
+              nextWaveAt
             })
+            console.log(`No more portal monsters, next wave in ${((nextWaveAt - time) / 1000).toFixed(2)}s`)
           }
           else
           {

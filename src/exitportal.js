@@ -1,7 +1,7 @@
 'use strict'
 
 import Phaser from 'phaser'
-import { DepthSort, PortalStates } from './defines'
+import { GameEvents, PortalStates, DepthSort } from './defines'
 
 
 export default class ExitPortal extends Phaser.GameObjects.Triangle {
@@ -21,7 +21,7 @@ export default class ExitPortal extends Phaser.GameObjects.Triangle {
       const portals = this.scene.portals.getChildren()
       if (portals.every(p => p.state === PortalStates.EXPIRED))
       {
-        this.scene.scene.restart({})
+        this.scene.events.emit(GameEvents.EXIT_PORTAL_ACTIVATED, this)
       }
     })
   }

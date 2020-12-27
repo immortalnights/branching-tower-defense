@@ -9,10 +9,17 @@ const DefaultKeys = {
   DECELERATE_ALT: 'DOWN',
   STRAFE_RIGHT_ALT: 'RIGHT',
   STRAFE_LEFT_ALT: 'LEFT',
+  BUILD_THERMAL: 'ONE',
+  BUILD_ELECTRICAL: 'TWO',
+  BUILD_COLD: 'THREE',
+  BUILD_CORROSIVE: 'FOUR',
+  BUILD_ENHANCER: 'FIVE',
+  CLOSE_DIALOG: 'ESC',
 }
 
 const GameEvents = {
-  PORTAL_ACTIVATED: 'expired',
+  EXIT_PORTAL_ACTIVATED: 'level:exit',
+  PORTAL_ACTIVATED: 'portal:activated',
   PORTAL_EXPIRED: 'portal:expired',
   MONSTER_KILLED: 'monster:killed',
   TOWER_SELECT: 'tower:select',

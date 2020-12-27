@@ -9,6 +9,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
   {
     super(scene, path.getEndPoint().x, path.getEndPoint().y, 10)
 
+    // Extend with components
     Object.assign(this, Phaser.GameObjects.Components.PathFollower)
 
     this.setPath(path)
@@ -21,42 +22,47 @@ export default class Walker extends Phaser.GameObjects.Arc {
     })
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      this.startFollow({
-        duration: 3000, // TODO
-        positionOnPath: true,
-        rotateToPath: true,
-        onComplete: () => {
-          // This is sometimes called when the enemy is killed, so only reduce
-          // the players life if the enemy is active.
-          if (this.active)
-          {
-            if (this.emitter)
-            {
-              this.emitter.remove()
-            }
-
-            let stability = scene.exitPortal.getData('stability')
-            if (this.state === MonsterStates.DEAD)
-            {
-              stability += this.getData('stabilityDamage')
-            }
-            else
-            {
-              stability -= this.getData('stabilityDamage')
-            }
-
-            scene.exitPortal.setData('stability', Phaser.Math.Clamp(stability, -100, 100))
-
-            // TODO monsters don't die when reaching the core, they attack it
-            // causing core damage per second
-            this.destroy()
-          }
-        }
-      })
+      this.beginFollow(10000)
     })
 
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
     })
+  }
+
+  beginFollow(duration, start)
+  {
+    this.startFollow({
+      duration: duration,
+      positionOnPath: true,
+      rotateToPath: false,
+      onComplete: () => {
+        // This is sometimes called when the enemy is killed, so only reduce
+        // the players life if the enemy is active.
+        if (this.active)
+        {
+          if (this.emitter)
+          {
+            this.emitter.remove()
+          }
+
+          let stability = this.scene.exitPortal.getData('stability')
+          if (this.state === MonsterStates.DEAD)
+          {
+            stability += this.getData('stabilityDamage')
+          }
+          else
+          {
+            stability -= this.getData('stabilityDamage')
+          }
+
+          this.scene.exitPortal.setData('stability', Phaser.Math.Clamp(stability, -100, 100))
+
+          // TODO monsters don't die when reaching the core, they attack it
+          // causing core damage per second
+          this.destroy()
+        }
+      }
+    }, start)
   }
 
   isAlive()
@@ -73,6 +79,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
   {
     this.setState(MonsterStates.DEAD)
     this.emit(GameEvents.MONSTER_KILLED, this)
+    this.beginFollow(5000, this.pathTween.getValue())
     this.setVisible(false)
   }
 
