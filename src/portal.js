@@ -33,7 +33,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     })
 
     // TODO pick better wave / monster counts
-    this.setState(PortalStates.WAVE_COUNTDOWN)
+    this.setState(PortalStates.WAITING)
     this.setData({
       points: 8,
       threat: "Unknown",
@@ -46,7 +46,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       // wave count
       wave: 0,
       // time between each wave
-      waveDelay: (3000 * Math.random()),
+      waveDelay: Phaser.Math.RND.between(2000, 5000),
       // time between each monster
       spawnDelay: 50,
       // next wave time (would not be set by default)
@@ -66,8 +66,6 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       scene.add.existing(this.towers)
       scene.add.existing(this.monsters)
       scene.add.existing(this.particleManager)
-
-      scene.events.emit(GameEvents.PORTAL_ACTIVATED, this)
 
       // FIXME find a better place to add the towers to the scene
       this.towers.getChildren().forEach(t => {
@@ -90,11 +88,32 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     return this.active && PortalActiveStates.includes(this.state)
   }
 
+  setState(state)
+  {
+    const previous = this.state
+    super.setState(state)
+
+    if (this.state === PortalStates.WAVE_COUNTDOWN)
+    {
+      this.emit(GameEvents.PORTAL_ACTIVATED, this)
+    }
+    else if (this.state === PortalStates.EXPIRED)
+    {
+      this.emit(GameEvents.PORTAL_EXPIRED, this)
+    }
+
+    this.emit(GameEvents.PORTAL_STATE_CHANGED, this, this.state, previous)
+  }
+
   preUpdate(time, delta)
   {
     switch (this.state)
     {
       case PortalStates.BRANCHING:
+      {
+        break
+      }
+      case PortalStates.WAITING:
       {
         break
       }
@@ -247,7 +266,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       }
 
       length = Phaser.Math.RND.between(50, 100)
-      angle = (Phaser.Math.RND.realInRange(...angle))
+      angle = Phaser.Math.RND.realInRange(...angle)
 
       const next = new Phaser.Math.Vector2(origin)
       // console.log(`From ${next.x}, ${next.y} at ${angle} for ${length}`)

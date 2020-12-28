@@ -28,7 +28,7 @@ export default class PortalOverview extends Phaser.GameObjects.Container {
     let iconX = ((iconWidth + iconPadding) / 2) + -((iconWidth + iconPadding) * (portals.length / 2))
     portals.forEach((portal, index) => {
       const portalIcon = new Phaser.GameObjects.Rectangle(scene, iconX, 0, iconWidth, 36)
-      
+
       if (portal.isAlive())
       {
         portalIcon.setStrokeStyle(1, ACTIVE_COLOR, 1)

@@ -118,8 +118,8 @@ class CannonWeapon extends Weapon {
     })
     this.setProjectileOrigin(container.x, container.y)
     this.setProjectileDamage(1)
-    this.setRateOfFire(0.5)
-    this.setProjectileSpeed(400)
+    this.setRateOfFire(3)
+    this.setProjectileSpeed(350)
   }
 
   draw()

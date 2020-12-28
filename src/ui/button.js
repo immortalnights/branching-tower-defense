@@ -21,6 +21,7 @@ export default class Button extends Phaser.GameObjects.Container {
 
     const width = options.width || this.label.width + 8
     const height = options.height || this.label.height + 4
+    const enabled = (options.disabled === undefined || options.disabled === false)
 
     this.border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
     this.border.setStrokeStyle(1, 0x444444, 1)
@@ -28,6 +29,11 @@ export default class Button extends Phaser.GameObjects.Container {
 
     this.setSize(width, height)
     this.setInteractive()
+
+    if (enabled === false)
+    {
+      this.disable()
+    }
 
     this.on('pointerdown', (pointer, localX, localY, event) => {
       event.stopPropagation()
@@ -41,5 +47,17 @@ export default class Button extends Phaser.GameObjects.Container {
     this.on('pointerout', () => {
       this.border.setStrokeStyle(1, 0x444444, 1)
     })
+  }
+
+  enable()
+  {
+    this.label.setColor('#FFFFFF')
+    this.setInteractive()
+  }
+
+  disable()
+  {
+    this.label.setColor('#555555')
+    this.disableInteractive()
   }
 }

@@ -18,7 +18,10 @@ const DefaultKeys = {
 }
 
 const GameEvents = {
+  START_COUNTDOWN: 'game:startcountdown',
+  END_COUNTDOWN: 'game:endcountdown',
   EXIT_PORTAL_ACTIVATED: 'level:exit',
+  PORTAL_STATE_CHANGED: 'portal:statechanged',
   PORTAL_ACTIVATED: 'portal:activated',
   PORTAL_EXPIRED: 'portal:expired',
   MONSTER_KILLED: 'monster:killed',
@@ -28,6 +31,7 @@ const GameEvents = {
 }
 
 const PortalStates = {
+  WAITING: 'waiting',
   BRANCHING: 'branching',
   WAVE_COUNTDOWN: 'countdown',
   SPAWNING: 'spawning',

@@ -11,13 +11,7 @@ const config = {
   width: 1024,
   height: 768,
   scene: [ Game, HUD ],
-  seed: 1,
-  physics: {
-    default: 'arcade',
-    arcade: {
-      debug: false
-    }
-  },
+  seed: [ 'T' ],
   loader: {
     baseUrl: '.',
     path: process.env.NODE_ENV === 'production' ? './assets' : './src/assets'

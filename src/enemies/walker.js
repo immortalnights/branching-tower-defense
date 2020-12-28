@@ -17,6 +17,8 @@ export default class Walker extends Phaser.GameObjects.Arc {
 
     this.setState(MonsterStates.ALIVE)
     this.setData({
+      health: 1,
+      materialValue: 2,
       stabilityDamage: 2,
       attackPlayer: false,
     })
@@ -72,13 +74,21 @@ export default class Walker extends Phaser.GameObjects.Arc {
 
   takeDamage(amount)
   {
-    this.kill()
+    const health = this.getData('health')
+    this.incData('health', -amount)
+
+    if (amount >= health)
+    {
+      this.kill()
+    }
   }
 
   kill()
   {
     this.setState(MonsterStates.DEAD)
+    // FIX ME, two events?
     this.emit(GameEvents.MONSTER_KILLED, this)
+    this.scene.events.emit(GameEvents.MONSTER_KILLED, this)
     this.beginFollow(5000, this.pathTween.getValue())
     this.setVisible(false)
   }

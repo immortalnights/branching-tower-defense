@@ -17,10 +17,13 @@ export default class Ship extends Phaser.GameObjects.Graphics {
 
     this.setDepth(DepthSort.PLAYER)
 
-    this.setData({})
+    this.setData({
+      technologylevel: 1,
+      materials: 200,
+    })
     this.setProjectileDamage(1)
-    this.setRateOfFire(3)
-    this.setProjectileSpeed(200)
+    this.setRateOfFire(0.5)
+    this.setProjectileSpeed(350)
 
     // Draw sprite
     this.fillStyle(0x000000, 1)
@@ -37,13 +40,43 @@ export default class Ship extends Phaser.GameObjects.Graphics {
     this.closePath()
     this.strokePath()
 
+    this.on('changedata-inventory', () => {
+      console.log("inventory changes")
+    })
+
+    this.on('changedata-inventory.materials', () => {
+      console.log("materials changed")
+    })
+
     // this.projectiles = new Phaser.GameObjects.Group()
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       this.body.setDamping(true)
       this.body.setDrag(0.01)
-      this.body.setMaxVelocity(400)
+      this.body.setMaxVelocity(300)
     })
+  }
+
+  toJSON()
+  {
+    return {
+      x: this.x,
+      y: this.y,
+      r: this.body.rotation,
+      materials: this.getData('materials')
+    }
+  }
+
+  fromJSON(data)
+  {
+    if (data)
+    {
+      this.x = data.x
+      this.y = data.y
+      // this.rotation = data.rotation
+      this.body.rotation = data.rotation
+      this.setData('materials', data.materials)
+    }
   }
 
   tryFire()

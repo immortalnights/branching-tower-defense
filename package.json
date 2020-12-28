@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --config webpack/prod.js ",
     "start": "webpack-dev-server --config webpack/base.js --open",
-    "publish": "set NODE_DEBUG=gh-pages & node publish.js"
+    "publish": "set NODE_DEBUG=gh-pages && node publish.js"
   },
   "repository": {
     "type": "git",

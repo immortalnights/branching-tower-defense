@@ -37,9 +37,14 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     this.add(this.border)
 
     const onBuild = function(tower, type) {
-      this.events.emit(GameEvents.TOWER_BUILD, tower, type)
+      const gameScene = this.scene.get('game')
+
+      gameScene.events.emit(GameEvents.TOWER_BUILD, tower, type)
       this.events.emit(GameEvents.TOWER_BUILD_CLOSE)
     }
+
+    const gameScene = this.scene.scene.get('game')
+    const [ technologyLevel, materials ] = gameScene.localPlayer.getData([ 'technologylevel', 'materials' ])
 
     // buttons
     // this.buttons = []
@@ -50,11 +55,17 @@ export default class TowerUI extends Phaser.GameObjects.Container {
     towerTypes.forEach((type, index) => {
       const towerOnBuild = onBuild.bind(this.scene, this.tower, { ...type })
 
+      const canBuild = technologyLevel >= type.requiredTechnologyLevel && materials >= type.requiredMaterials
+
       const btn = new Button(scene, buttonX, buttonY, type.displayName, {
         width: buttonWidth,
         height: buttonHeight,
+        disabled: !canBuild,
         onClick: (pointer, localX, localY, event) => {
-          towerOnBuild()
+          if (canBuild)
+          {
+            towerOnBuild()
+          }
         }
       })
       this.add(btn)

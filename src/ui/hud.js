@@ -2,9 +2,33 @@
 
 import Phaser from 'phaser'
 import TowerConstructionMenu from './towerui'
-import PortalStability from './portalstability'
+import CountdownTimer from './countdowntimer'
 import PortalOverview from './portaloverview'
+import PortalStability from './portalstability'
 import { GameEvents } from '../defines'
+
+
+class MaterialsDisplay extends Phaser.GameObjects.Container {
+  constructor(scene, x, y)
+  {
+    super(scene, x, y)
+
+    const formatText = materials => {
+      return `Materials: ${materials.toFixed(0)}`
+    }
+
+    const text = new Phaser.GameObjects.Text(scene, 0, 0, "")
+    text.setOrigin(0.5, 0.5)
+    this.add(text)
+
+    const gameScene = this.scene.scene.get('game')
+    gameScene.localPlayer.on('changedata-materials', (obj, val) => {
+      text.setText(formatText(val))
+    })
+
+    text.setText(formatText(gameScene.localPlayer.getData('materials')))
+  }
+}
 
 
 export default class HUD extends Phaser.Scene {
@@ -15,8 +39,6 @@ export default class HUD extends Phaser.Scene {
 
   create()
   {
-    // this.setDepth(DepthSort.UI)
-
     const { width, height } = this.sys.game.canvas
 
     let towerUI = null
@@ -42,18 +64,20 @@ export default class HUD extends Phaser.Scene {
           this.add.existing(towerUI)
         }
       },
-
-      [GameEvents.TOWER_BUILD]: (tower, type) => {
-        tower.build(type)
-      }
     }
 
     this.input.on('pointerdown', () => {
       sceneEventHandlers[GameEvents.TOWER_BUILD_CLOSE]()
     })
 
+    const countdownTimer = new CountdownTimer(this, width / 2, 25)
+    this.add.existing(countdownTimer)
+
     const portalOverview = new PortalOverview(this, width / 2, height - 200)
     this.add.existing(portalOverview)
+
+    const playerInventory = new MaterialsDisplay(this, width / 2, height - 160)
+    this.add.existing(playerInventory)
 
     const portalStability = new PortalStability(this, width / 2, height - 100)
     this.add.existing(portalStability)
