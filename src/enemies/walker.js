@@ -46,6 +46,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
     })
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
+      this.body.setImmovable()
       this.beginFollow(pathDuration)
     })
 

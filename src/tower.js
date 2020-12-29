@@ -7,7 +7,7 @@ import { GameEvents } from './defines'
 
 
 class Weapon extends Phaser.GameObjects.Graphics {
-  constructor(scene, x, y)
+  constructor(scene, x, y, config)
   {
     super(scene, { x, y })
 
@@ -105,7 +105,7 @@ class Weapon extends Phaser.GameObjects.Graphics {
 }
 
 class CannonWeapon extends Weapon {
-  constructor(container, x, y)
+  constructor(container, x, y, config)
   {
     super(container.scene, x, y)
 
@@ -113,13 +113,16 @@ class CannonWeapon extends Weapon {
     Object.assign(this, RateLimitedWeaponComponent)
 
     this.setData({
-      range: 50,
-      rotationSpeed: 0.25,
+      range: config.range,
+      rotationSpeed: config.rotationSpeed,
     })
     this.setProjectileOrigin(container.x, container.y)
-    this.setProjectileDamage(1)
-    this.setRateOfFire(3)
-    this.setProjectileSpeed(350)
+    this.setProjectileDamage(config.damage)
+    this.setRateOfFire(config.rateOfFire)
+    this.setProjectileSpeed(config.projectileSpeed)
+
+    const [ damage, multiplier, rateOfFire, rateOfFireMultiplier ] = this.getData([ 'damage', 'damageMultiplier', 'rateOfFire', 'rateOfFireMultiplier' ])
+    console.log(`Tower weapon ${damage * multiplier}d, ${rateOfFire * rateOfFireMultiplier}a/s`)
   }
 
   draw()
@@ -274,7 +277,7 @@ export default class Tower extends Phaser.GameObjects.Container {
 
     console.assert(className, `Failed to identify tower class from type '${type.id}'`)
 
-    this.weapon = new (className)(this, 0, 0)
+    this.weapon = new (className)(this, 0, 0, type)
     this.add(this.weapon)
   }
 }

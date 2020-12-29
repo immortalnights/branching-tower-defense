@@ -7,13 +7,12 @@
     "color": "0xFF0000",
     "requiredMaterials": 100,
     "requiredTechnologyLevel": 1,
-    "damage": 1,
+    "damage": 2,
     "damageType": "thermal",
+    "range": 50,
+    "rotationSpeed": 0.25,
+    "rateOfFire": 3,
     "projectileSpeed": 350,
-    "range": 1,
-    "rateOfFire": 1,
-    "speedModifier": 1,
-    "damageModifier": 1,
     "resistanceModifier": 1
   },
   {
@@ -28,8 +27,6 @@
     "damageType": "electrical",
     "range": 1,
     "rateOfFire": 1,
-    "speedModifier": 1,
-    "damageModifier": 1,
     "resistanceModifier": 0.95
   },
   {
@@ -44,8 +41,6 @@
     "damageType": "cold",
     "range": 1,
     "rateOfFire": 1,
-    "speedModifier": 0.95,
-    "damageModifier": 1,
     "resistanceModifier": 1
   },
   {
@@ -60,8 +55,6 @@
     "damageType": "corrosive",
     "range": 1,
     "rateOfFire": 1,
-    "speedModifier": 1,
-    "damageModifier": 1,
     "resistanceModifier": 1
   },
   {
