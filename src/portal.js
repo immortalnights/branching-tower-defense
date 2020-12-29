@@ -8,10 +8,30 @@ import { GameEvents, PortalStates } from './defines'
 const PortalActiveStates = [PortalStates.WAVE_COUNTDOWN, PortalStates.SPAWNING, PortalStates.WAVE_COOLDOWN]
 
 
+const PortalConfiguration = {
+  pathSegments: 6,
+  threatLevel: 1,
+  maximumTechnologyLevel: 1
+}
+
+
+const getThreatLevelName = threatLevel => {
+  return "Unknown"
+}
+
+
 export default class Portal extends Phaser.GameObjects.Graphics {
-  constructor(scene, origin)
+  /**
+   * @param {Phaser.Scene} scene
+   * @param {Phaser.Math.Vector2D} origin - start point for the path
+   * @param {PortalConfiguration} - portal configuration
+   */
+  constructor(scene, origin, config)
   {
     super(scene)
+
+    config = Object.assign({}, PortalConfiguration, config)
+    console.log("Portal config", config)
 
     // represents the path
     this.path = new Phaser.Curves.Path(origin.x, origin.y)
@@ -32,35 +52,111 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       tint: 0x990000
     })
 
+    const totalWaves = 1 + config.threatLevel
+    console.log(`Portal threat ${config.threatLevel}, waves ${totalWaves}`)
+
     // TODO pick better wave / monster counts
     this.setState(PortalStates.WAITING)
     this.setData({
-      points: 8,
-      threat: "Unknown",
+      threatLevel: config.threatLevel,
+      threat: getThreatLevelName(config.threatLevel),
       // total waves
-      totalWaves: 4,
-      // total monsters (remove?)
-      totalMonsters: 16,
-      // monsters per wave
-      waveMonsters: 6,
+      totalWaves,
+      // total monsters
+      totalMonsters: undefined,
       // wave count
       wave: 0,
-      // time between each wave
-      waveDelay: Phaser.Math.RND.between(2000, 5000),
-      // time between each monster
-      spawnDelay: 50,
-      // next wave time (would not be set by default)
-      nextWaveAt: 0,
-      // next monster spwan time
-      nextSpawnAt: 0,
+      // next wave or spwan time
+      nextEventAt: 0,
       // monsters spawned this wave
       spawnedForWave: 0,
       // total monsters spawned
       spawned: 0,
     })
 
+    // FIXME better name!
+    const groupTypes = [
+      {
+        type: 'Default',
+        monsterType: 'Walker',
+        monsterMultiplier: 4,
+        healthMultiplier: 1,
+        speedMultiplier: 1,
+        delay: 2000
+      },
+      {
+        type: 'Many, weaker',
+        monsterType: 'Walker',
+        monsterMultiplier: 12,
+        healthMultiplier: 0.75,
+        speedMultiplier: 0.75,
+        delay: 2500
+      },
+      {
+        type: 'Many, fast, but weak',
+        monsterType: 'Walker',
+        monsterMultiplier: 8,
+        healthMultiplier: 0.25,
+        speedMultiplier: 4,
+        delay: 3000
+      },
+      {
+        type: 'Slower and stronger',
+        monsterType: 'Walker',
+        monsterMultiplier: 4,
+        healthMultiplier: 4,
+        speedMultiplier: 2,
+        delay: 4000
+      },
+      {
+        type: 'Very slow, very strong',
+        monsterType: 'Walker',
+        monsterMultiplier: 2,
+        healthMultiplier: 10,
+        speedMultiplier: 0.25,
+        delay: 5000
+      }
+    ]
+
+    const weightedValue = (base, threat) => {
+      return Math.ceil(base * (1 + ~~(Math.pow(Phaser.Math.RND.frac(), 2) * (threat) + 0.5)))
+    }
+
+    this.waveSettings = []
+    let totalMonsters = 0
+    for (let w = 0; w < totalWaves; w++)
+    {
+      const groupType = Phaser.Math.RND.weightedPick(groupTypes)
+
+      // time between each wave (first wave begins when the level countdown expires)
+      const delay = Phaser.Math.RND.between(1500, groupType.delay)
+      // monsters stats for wave
+      const monsters = weightedValue(groupType.monsterMultiplier, config.threatLevel)
+      const healthMultiplier = weightedValue(groupType.healthMultiplier, config.threatLevel)
+      const speedMultiplier = weightedValue(groupType.speedMultiplier, config.threatLevel)
+      // time between each monster
+      const spawnDelay = Phaser.Math.RND.between(200, ((groupType.delay * 4) / 100))
+
+      const waveSettings = {
+        delay,
+        monsters,
+        modifiers: {
+          healthMultiplier,
+          speedMultiplier,
+        },
+        spawnDelay,
+      }
+
+      console.log(`Wave ${w} for threat ${config.threatLevel}, ${groupType.type}:`, waveSettings)
+      this.waveSettings.push(waveSettings)
+
+      totalMonsters += waveSettings.monsters
+    }
+
+    this.setData({ totalMonsters })
+
     // TODO - plot incrementally over time for a better effect
-    this.plotPath(0)
+    this.plotPath(config.pathSegments)
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       scene.add.existing(this.towers)
@@ -88,6 +184,12 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     return this.active && PortalActiveStates.includes(this.state)
   }
 
+  // start spawning
+  activate()
+  {
+    this.setState(PortalStates.SPAWNING)
+  }
+
   setState(state)
   {
     const previous = this.state
@@ -107,6 +209,9 @@ export default class Portal extends Phaser.GameObjects.Graphics {
 
   preUpdate(time, delta)
   {
+    const currentWave = this.getData('wave')
+    const waveSettings = this.waveSettings[currentWave]
+
     switch (this.state)
     {
       case PortalStates.BRANCHING:
@@ -119,23 +224,20 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       }
       case PortalStates.WAVE_COUNTDOWN:
       {
-        if (time > this.getData('nextWaveAt'))
+        if (time > this.getData('nextEventAt'))
         {
-          const currentWave = this.getData('wave')
           this.setState(PortalStates.SPAWNING)
           this.setData({
-            wave: currentWave + 1,
-            nextSpawnAt: time + this.getData('spawnDelay'),
-            spawnedForWave: 0
+            nextEventAt: 0
           })
         }
         break
       }
       case PortalStates.SPAWNING:
       {
-        if (time > this.getData('nextSpawnAt'))
+        if (time > this.getData('nextEventAt'))
         {
-          const monster = new Walker(this.scene, this.path)
+          const monster = new Walker(this.scene, this.path, waveSettings.modifiers)
           monster.once(GameEvents.MONSTER_KILLED, obj => {
             this.exploderEmitter.setPosition(obj.x, obj.y)
             this.exploderEmitter.explode(10)
@@ -152,7 +254,11 @@ export default class Portal extends Phaser.GameObjects.Graphics {
             obj.emitter.startFollow(obj)
           })
 
-          monster.once(Phaser.GameObjects.Events.DESTROY, () => {
+          monster.once(Phaser.GameObjects.Events.DESTROY, obj => {
+            if (obj.emitter)
+            {
+              obj.emitter.remove()
+            }
           })
 
           this.monsters.add(monster)
@@ -161,22 +267,36 @@ export default class Portal extends Phaser.GameObjects.Graphics {
           this.incData('spawned')
           this.incData('spawnedForWave')
 
-          if (this.getData('spawnedForWave') < this.getData('waveMonsters'))
+          // Is the wave complete?
+          if (this.getData('spawnedForWave') < waveSettings.monsters)
           {
-            this.setData('nextSpawnAt', time + this.getData('spawnDelay'))
+            // No, continue spawning monsters
+            this.setData('nextEventAt', time + waveSettings.spawnDelay)
           }
           else
           {
-            this.setState(PortalStates.WAVE_COOLDOWN)
-            this.setData({
-              nextSpawnAt: 0
-            })
+            console.log(`Portal has spawned all wave monsters`)
 
-            // TODO remove, for demonstration purposed, kill them all!
-            // this.monsters.getChildren().forEach(monster => {
-            //   monster.emit(GameEvents.MONSTER_KILLED, monster)
-            //   monster.setVisible(false)
-            // })
+            // Are all waves complete?
+            if (currentWave < (this.getData('totalWaves') - 1))
+            {
+              // No, wait for the next wave to start
+              const nextWave = currentWave + 1
+              const nextWaveTime = time + this.waveSettings[nextWave].delay
+
+              this.setState(PortalStates.WAVE_COUNTDOWN)
+              this.setData({
+                wave: nextWave,
+                nextEventAt: nextWaveTime,
+                spawnedForWave: 0
+              })
+
+              console.log(`Next wave in ${((nextWaveTime - time) / 1000).toFixed(2)}s`)
+            }
+            else
+            {
+              this.setState(PortalStates.WAVE_COOLDOWN)
+            }
           }
         }
         break
@@ -185,27 +305,11 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       {
         if (this.monsters.getChildren().length == 0)
         {
-          if (this.getData('wave') < this.getData('totalWaves'))
-          {
-            this.setState(PortalStates.WAVE_COUNTDOWN)
-
-            const nextWaveAt = time + this.getData('waveDelay')
-            this.setData({
-              nextWaveAt
-            })
-            console.log(`No more portal monsters, next wave in ${((nextWaveAt - time) / 1000).toFixed(2)}s`)
-          }
-          else
-          {
-            console.log("Portal has expired")
-            this.setState(PortalStates.EXPIRED)
-            this.emit(GameEvents.PORTAL_EXPIRED, this)
-            this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
-            this.redraw()
-          }
-        }
-        else
-        {
+          console.log("Portal has expired")
+          this.setState(PortalStates.EXPIRED)
+          this.emit(GameEvents.PORTAL_EXPIRED, this)
+          this.scene.events.emit(GameEvents.PORTAL_EXPIRED, this)
+          this.redraw()
         }
         break
       }
@@ -247,7 +351,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     }
   }
 
-  plotPath()
+  plotPath(totalPoints)
   {
     const nextPoint = (origin, previous) => {
       let angle
@@ -278,7 +382,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       return next
     }
 
-    for (let i = 0; i < this.getData('points'); i++)
+    for (let i = 0; i < totalPoints; i++)
     {
       let origin
       let previous

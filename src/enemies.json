@@ -1,17 +1,17 @@
 [
   {
-    "id": "walker",
+    "id": "Walker",
     "name": "Walker",
     "description": "Basic enemy.",
+    "speed": 50,
+    "damage": 2,
+    "health": 1,
     "resistances": {
       "thermal": 0,
       "electrical": 0,
       "cold": 0,
       "corrosive": 0
     },
-    "speed": 1,
-    "damageMultiplier": 1,
-    "health": 1,
-    "value": 2
+    "materials": 2
   }
 ]

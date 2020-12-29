@@ -26,7 +26,10 @@ export default class Game extends Phaser.Scene {
   {
     const { width, height } = this.sys.game.canvas
 
-    console.log(options)
+    // Update game level counter
+    this.game.registry.inc('location', 1)
+
+    // console.log(options)
 
     // Only need this event listener once
     this.physics.world.on('worldbounds', obj => {
@@ -44,8 +47,9 @@ export default class Game extends Phaser.Scene {
     const sceneEventHandlers = {
       [GameEvents.EXIT_PORTAL_ACTIVATED]: exitPortal => {
         const player = this.localPlayer.toJSON()
+        const stability = exitPortal.getData('stability')
 
-        this.scene.restart({ player })
+        this.scene.restart({ player, stability })
       },
 
       [GameEvents.PORTAL_EXPIRED]: portal => {
@@ -108,16 +112,19 @@ export default class Game extends Phaser.Scene {
     this.projectiles = this.physics.add.group()
 
     this.exitPortal = new ExitPortal(this, width / 2, height / 2 - 5)
+    this.exitPortal.setData('stability', options.stability || 0)
     this.add.existing(this.exitPortal)
 
     this.portals = this.add.group()
     this.towers = this.add.group()
     this.monsters = this.physics.add.group()
 
-    const PORTAL_COUNT = 2
+    const PORTAL_COUNT = 1
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
-      const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2))
+      const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2), {
+        threatLevel: 1
+      })
       this.portals.add(portal, true)
     }
 
@@ -130,6 +137,7 @@ export default class Game extends Phaser.Scene {
     }, (projectile, monster) => monster.isAlive())
 
     // Launch the UI scene once all the game objects are initialized
+    // FIXME - launch causes the scene to be recreated, in some ways this is good, but it would be better if it was not required
     this.scene.launch('ui')
     this.debugText = this.add.text(0, 0, ``)
 
@@ -144,7 +152,7 @@ export default class Game extends Phaser.Scene {
 
           const portals = this.portals.getChildren()
           portals.forEach(portal => {
-            portal.setState(PortalStates.WAVE_COOLDOWN)
+            portal.activate()
           })
         },
         args: []

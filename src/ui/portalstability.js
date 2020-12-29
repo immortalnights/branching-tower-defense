@@ -55,39 +55,43 @@ export default class PortalStability extends Phaser.GameObjects.Container {
     //   this.incData('stability', change)
     // }, 50)
 
+    const update = val => {
+      let w = Math.max(Math.abs((barMaxWidth / 2) * (val / 100)), barMinWidth)
+      stabilityBar.width = w
+
+      if (val > 5)
+      {
+        // Good
+        stabilityBar.setFillStyle(0x44FF44, 0.9)
+        stabilityBar.x = 0
+      }
+      else if (val < -5)
+      {
+        // Bad
+        stabilityBar.setFillStyle(0xFF4444, 0.9)
+        // stabilityBar.setOrigin()
+        stabilityBar.x = 10 - w
+      }
+      else
+      {
+        stabilityBar.setFillStyle(0x444444, 0.9)
+      }
+
+      stabilityPercentage.setText(`${val.toFixed(0)}%`)
+    }
+
     this.on(Phaser.GameObjects.Events.ADDED_TO_SCENE, () => {
       const exitPortal = this.scene.scene.get('game').exitPortal
 
       exitPortal.on('changedata-stability', (obj, val, previous) => {
-
-        let w = Math.max(Math.abs((barMaxWidth / 2) * (val / 100)), barMinWidth)
-        stabilityBar.width = w
-
-        if (val > 5)
-        {
-          // Good
-          stabilityBar.setFillStyle(0x44FF44, 0.9)
-          stabilityBar.x = 0
-        }
-        else if (val < -5)
-        {
-          // Bad
-          stabilityBar.setFillStyle(0xFF4444, 0.9)
-          // stabilityBar.setOrigin()
-          stabilityBar.x = 10 - w
-        }
-        else
-        {
-          stabilityBar.setFillStyle(0x444444, 0.9)
-        }
-
-        // TODO track the bar?
-        stabilityPercentage.setText(`${val.toFixed(0)}%`)
+        update(val)
       })
 
       this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
         exitPortal.off('changedata-stability')
       })
+
+      update(exitPortal.getData('stability'))
     })
   }
 }

@@ -8,25 +8,31 @@ import PortalStability from './portalstability'
 import { GameEvents } from '../defines'
 
 
-class MaterialsDisplay extends Phaser.GameObjects.Container {
-  constructor(scene, x, y)
+class DataValueDisplay extends Phaser.GameObjects.Container {
+  constructor(scene, x, y, obj, property, formatter)
   {
     super(scene, x, y)
-
-    const formatText = materials => {
-      return `Materials: ${materials.toFixed(0)}`
-    }
 
     const text = new Phaser.GameObjects.Text(scene, 0, 0, "")
     text.setOrigin(0.5, 0.5)
     this.add(text)
 
-    const gameScene = this.scene.scene.get('game')
-    gameScene.localPlayer.on('changedata-materials', (obj, val) => {
-      text.setText(formatText(val))
+    // handle GameObjects and Game/Scenes
+    const ee = obj.events ? obj.events : obj
+    const dm = obj.registry ? obj.registry : obj.data
+
+    const eventName = 'changedata-' + property
+    const fn = (obj, val) => {
+      text.setText(formatter(val))
+    }
+
+    ee.on(eventName, fn)
+
+    this.on('destroy', () => {
+      ee.off(eventName, fn)
     })
 
-    text.setText(formatText(gameScene.localPlayer.getData('materials')))
+    text.setText(formatter(dm.get(property)))
   }
 }
 
@@ -35,6 +41,11 @@ export default class HUD extends Phaser.Scene {
   constructor(config)
   {
     super({ ...config, key: 'ui' })
+  }
+
+  init()
+  {
+    console.log("HUD.init")
   }
 
   create()
@@ -73,11 +84,26 @@ export default class HUD extends Phaser.Scene {
     const countdownTimer = new CountdownTimer(this, width / 2, 25)
     this.add.existing(countdownTimer)
 
+    const locationLabel = new DataValueDisplay(this, width - 100, 20, this.game, 'location', val => {
+      return `Location: ${val.toFixed(0)}`
+    })
+    this.add.existing(locationLabel)
+
     const portalOverview = new PortalOverview(this, width / 2, height - 200)
     this.add.existing(portalOverview)
 
-    const playerInventory = new MaterialsDisplay(this, width / 2, height - 160)
-    this.add.existing(playerInventory)
+    // local player details
+    const localPlayer = this.scene.get('game').localPlayer
+
+    const materialsLabel = new DataValueDisplay(this, width / 2 - 100, height - 160, localPlayer, 'materials', val => {
+      return `Materials: ${val.toFixed(0)}`
+    })
+    this.add.existing(materialsLabel)
+
+    const technologyLevelLabel = new DataValueDisplay(this, width / 2 + 100, height - 160, localPlayer, 'technologylevel', val => {
+      return `Technology Level: ${val.toFixed(0)}`
+    })
+    this.add.existing(technologyLevelLabel)
 
     const portalStability = new PortalStability(this, width / 2, height - 100)
     this.add.existing(portalStability)

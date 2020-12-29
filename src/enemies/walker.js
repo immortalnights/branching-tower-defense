@@ -1,30 +1,52 @@
 'use strict'
 
 import Phaser from 'phaser'
+import enemyTypes from '../enemies.json'
 import { GameEvents, MonsterStates } from '../defines'
 
 
+// Base properties are taken from enemies.json, modifiers are applied by the portal
+const MonsterConfiguration = {
+  healthMultiplier: 1,
+  speedMultiplier: 1,
+}
+
+
 export default class Walker extends Phaser.GameObjects.Arc {
-  constructor(scene, path)
+  constructor(scene, path, config)
   {
     super(scene, path.getEndPoint().x, path.getEndPoint().y, 10)
 
     // Extend with components
     Object.assign(this, Phaser.GameObjects.Components.PathFollower)
 
+    const type = enemyTypes.find(t => t.id === 'Walker')
+
+    // console.log("Monster base", type, config)
+    config = Object.assign({}, type, MonsterConfiguration, config)
+    // console.log("Monster config", config)
+
+    const baseHealth = config.health
+    const health = config.health * config.healthMultiplier
+    const baseSpeed = config.speed
+    const speed = baseSpeed * config.speedMultiplier
+    const pathDuration = (path.getLength() / speed) * 1000
+    console.log(`Walker ${health}hp, ${speed}m/s (${pathDuration / 1000}s)`)
+
     this.setPath(path)
     this.setStrokeStyle(2, 0x662222, 1)
 
     this.setState(MonsterStates.ALIVE)
     this.setData({
-      health: 1,
-      materialValue: 2,
-      stabilityDamage: 2,
-      attackPlayer: false,
+      health,
+      speed,
+      materialValue: config.materials,
+      stabilityDamage: config.damage,
+      attacksPlayer: false,
     })
 
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
-      this.beginFollow(10000)
+      this.beginFollow(pathDuration)
     })
 
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
@@ -42,11 +64,6 @@ export default class Walker extends Phaser.GameObjects.Arc {
         // the players life if the enemy is active.
         if (this.active)
         {
-          if (this.emitter)
-          {
-            this.emitter.remove()
-          }
-
           let stability = this.scene.exitPortal.getData('stability')
           if (this.state === MonsterStates.DEAD)
           {
@@ -89,7 +106,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
     // FIX ME, two events?
     this.emit(GameEvents.MONSTER_KILLED, this)
     this.scene.events.emit(GameEvents.MONSTER_KILLED, this)
-    this.beginFollow(5000, this.pathTween.getValue())
+    this.beginFollow(2000, this.pathTween.getValue())
     this.setVisible(false)
   }
 
