@@ -16,20 +16,6 @@
     "resistanceModifier": 1
   },
   {
-    "id": "Electrical",
-    "name": "Electrical",
-    "description": "Applies electrical damage. Reducing the enemy resistances.",
-    "displayName": "El",
-    "color": "0x40e0d0",
-    "requiredMaterials": 100,
-    "requiredTechnologyLevel": 4,
-    "damage": 1,
-    "damageType": "electrical",
-    "range": 1,
-    "rateOfFire": 1,
-    "resistanceModifier": 0.95
-  },
-  {
     "id": "Cold",
     "name": "Cold",
     "description": "Applies cold damage. Reducing the enemy speed.",
@@ -42,6 +28,20 @@
     "range": 1,
     "rateOfFire": 1,
     "resistanceModifier": 1
+  },
+  {
+    "id": "Electrical",
+    "name": "Electrical",
+    "description": "Applies electrical damage. Reducing the enemy resistances.",
+    "displayName": "El",
+    "color": "0x40e0d0",
+    "requiredMaterials": 100,
+    "requiredTechnologyLevel": 4,
+    "damage": 1,
+    "damageType": "electrical",
+    "range": 1,
+    "rateOfFire": 1,
+    "resistanceModifier": 0.95
   },
   {
     "id": "Corrosive",

@@ -195,14 +195,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     const previous = this.state
     super.setState(state)
 
-    if (this.state === PortalStates.WAVE_COUNTDOWN)
-    {
-      this.emit(GameEvents.PORTAL_ACTIVATED, this)
-    }
-    else if (this.state === PortalStates.EXPIRED)
-    {
-      this.emit(GameEvents.PORTAL_EXPIRED, this)
-    }
+    // console.log(`Portal state ${previous} => ${state}`)
 
     this.emit(GameEvents.PORTAL_STATE_CHANGED, this, this.state, previous)
   }
@@ -331,23 +324,17 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       const end = this.path.getStartPoint()
       const iconSize = 10
       this.lineStyle(2, 0x333333, 1)
-      this.fillStyle(0x555555, 1)
-
-      const rect = [
-        end.x - iconSize / 2,
-        end.y - iconSize / 2,
-        iconSize,
-        iconSize
-      ]
 
       if (this.state === PortalStates.EXPIRED)
       {
-        this.strokeRect(...rect)
+        this.fillStyle(0x000000, 1)
       }
       else
       {
-        this.fillRect(...rect)
+        this.fillStyle(0x555555, 1)
       }
+
+      this.fillRect(end.x - iconSize / 2, end.y - iconSize / 2, iconSize, iconSize)
     }
   }
 

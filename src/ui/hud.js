@@ -9,12 +9,30 @@ import { GameEvents } from '../defines'
 
 
 class DataValueDisplay extends Phaser.GameObjects.Container {
-  constructor(scene, x, y, obj, property, formatter)
+  constructor(scene, x, y, obj, property, formatter, background, options)
   {
     super(scene, x, y)
 
-    const text = new Phaser.GameObjects.Text(scene, 0, 0, "")
+    options = Object.assign({ align: 'center' }, options)
+
+    if (background)
+    {
+      const border = new Phaser.GameObjects.Rectangle(scene, 0, 0, background.width, background.height)
+      border.setFillStyle(0x000000, 1)
+      border.setStrokeStyle(1, 0x111111, 1)
+      this.add(border)
+    }
+
+    const text = new Phaser.GameObjects.Text(scene, 0, 0, formatter(0))
     text.setOrigin(0.5, 0.5)
+    text.setAlign(options.align)
+
+    if (options.align === 'right')
+    {
+      text.setOrigin(1, 0.5)
+      text.setPosition((background && background.width || options.width) / 2 - 10, 0)
+    }
+
     this.add(text)
 
     // handle GameObjects and Game/Scenes
@@ -46,6 +64,10 @@ export default class HUD extends Phaser.Scene {
   init()
   {
     console.log("HUD.init")
+  }
+
+  preload()
+  {
   }
 
   create()
@@ -84,10 +106,15 @@ export default class HUD extends Phaser.Scene {
     const countdownTimer = new CountdownTimer(this, width / 2, 25)
     this.add.existing(countdownTimer)
 
-    const locationLabel = new DataValueDisplay(this, width - 100, 20, this.game, 'location', val => {
-      return `Location: ${val.toFixed(0)}`
-    })
+    const locationLabel = new DataValueDisplay(this, width - 100, 16, this.game, 'location', val => {
+      return `Location: ${val.toFixed(0).padStart(2, '0')}`
+    }, { width: 185, height: 60 }, { align: 'right' })
     this.add.existing(locationLabel)
+
+    const threatLevelLabel = new DataValueDisplay(this, width - 100, 32, this.game, 'threatlevel', val => {
+      return `Threat Level: ${val.toFixed(0).padStart(2, '0')}`
+    }, undefined, { align: 'right', width: 185 })
+    this.add.existing(threatLevelLabel)
 
     const portalOverview = new PortalOverview(this, width / 2, height - 200)
     this.add.existing(portalOverview)
@@ -95,14 +122,14 @@ export default class HUD extends Phaser.Scene {
     // local player details
     const localPlayer = this.scene.get('game').localPlayer
 
-    const materialsLabel = new DataValueDisplay(this, width / 2 - 100, height - 160, localPlayer, 'materials', val => {
-      return `Materials: ${val.toFixed(0)}`
-    })
+    const materialsLabel = new DataValueDisplay(this, width / 2 - 110, height - 159, localPlayer, 'materials', val => {
+      return `Materials: ${val.toFixed(0).padStart(3, '0')}`
+    }, { width: 220, height: 32 })
     this.add.existing(materialsLabel)
 
-    const technologyLevelLabel = new DataValueDisplay(this, width / 2 + 100, height - 160, localPlayer, 'technologylevel', val => {
-      return `Technology Level: ${val.toFixed(0)}`
-    })
+    const technologyLevelLabel = new DataValueDisplay(this, width / 2 + 110, height - 159, localPlayer, 'technologylevel', val => {
+      return `Technology Level: ${val.toFixed(0).padStart(2, '0')}`
+    }, { width: 220, height: 32 })
     this.add.existing(technologyLevelLabel)
 
     const portalStability = new PortalStability(this, width / 2, height - 100)

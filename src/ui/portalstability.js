@@ -2,6 +2,7 @@
 
 import Phaser from 'phaser'
 
+
 export default class PortalStability extends Phaser.GameObjects.Container {
   constructor(scene, x, y)
   {

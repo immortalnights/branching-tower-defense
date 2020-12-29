@@ -208,7 +208,7 @@ export default class Tower extends Phaser.GameObjects.Container {
     this.setSize(16, 16)
     this.setInteractive()
 
-    const defaultColor = 0x111111
+    const defaultColor = 0x222222
     this.setData({
       active: false,
       color: defaultColor,
@@ -216,6 +216,7 @@ export default class Tower extends Phaser.GameObjects.Container {
 
     const arc = new Phaser.GameObjects.Arc(scene, 0, 0, 8)
     arc.setStrokeStyle(2, defaultColor, 1)
+    arc.setFillStyle(0x000000, 1)
     this.add(arc)
 
     this.on('pointerdown', (pointer, x, y, event) => {

@@ -23,6 +23,7 @@ export default class CountdownTimer extends Phaser.GameObjects.Container {
     })
 
     const border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
+    border.setFillStyle(0x000000, 0.75)
     border.setStrokeStyle(1, 0x444444, 1)
     this.add(border)
 

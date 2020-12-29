@@ -34,6 +34,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
     console.log(`Walker ${health}hp, ${speed}m/s (${pathDuration / 1000}s)`)
 
     this.setPath(path)
+    this.setFillStyle(0x662222, 0.25)
     this.setStrokeStyle(2, 0x662222, 1)
 
     this.setState(MonsterStates.ALIVE)

@@ -26,10 +26,22 @@ export default class Game extends Phaser.Scene {
   {
     const { width, height } = this.sys.game.canvas
 
+    const calculateThreatLevel = location => {
+      return Math.max(1, Math.floor(Math.pow(location, 0.5)))
+    }
+
     // Update game level counter
     this.game.registry.inc('location', 1)
+    this.game.registry.set('threatlevel', calculateThreatLevel(this.game.registry.get('location')))
 
-    // console.log(options)
+    // let t = 0
+    // const v = []
+    // for (let l = 0; l < 100; l++)
+    // {
+    //   t = Math.pow(l, 0.5)
+    //   v.push(t)
+    // }
+    // console.log(v)
 
     // Only need this event listener once
     this.physics.world.on('worldbounds', obj => {
@@ -92,12 +104,15 @@ export default class Game extends Phaser.Scene {
 
   preload()
   {
+    this.load.image('background', './background.jpg')
     this.load.image('flare', './flare_01.png')
   }
 
   create(options)
   {
     const { width, height } = this.sys.game.canvas
+
+    this.add.image(0, 0, 'background').setAlpha(0.20).setScale(2)
 
     console.log("create", options)
 
