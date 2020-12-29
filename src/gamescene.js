@@ -7,6 +7,9 @@ import ExitPortal from './exitportal'
 import { DefaultKeys, GameEvents, PortalStates } from './defines'
 
 
+const INITIAL_STABILITY = 60
+
+
 export default class Game extends Phaser.Scene {
   constructor(config)
   {
@@ -59,9 +62,17 @@ export default class Game extends Phaser.Scene {
     const sceneEventHandlers = {
       [GameEvents.EXIT_PORTAL_ACTIVATED]: exitPortal => {
         const player = this.localPlayer.toJSON()
-        const stability = exitPortal.getData('stability')
+        let stability = exitPortal.getData('stability')
 
-        this.scene.restart({ player, stability })
+        if (stability > 25)
+        {
+          stability = stability - 10
+          this.scene.restart({ player, stability })
+        }
+        else
+        {
+          // FIXME, game over!
+        }
       },
 
       [GameEvents.PORTAL_EXPIRED]: portal => {
@@ -91,6 +102,7 @@ export default class Game extends Phaser.Scene {
       [GameEvents.MONSTER_KILLED]: monster => {
         const value = monster.getData('materialValue')
         this.localPlayer.incData('materials', value)
+        this.localPlayer.incData('datafragments', 0.15)
       }
     }
 
@@ -106,6 +118,9 @@ export default class Game extends Phaser.Scene {
   {
     this.load.image('background', './background.jpg')
     this.load.image('flare', './flare_01.png')
+    this.load.image('datafragments', './fragments.png')
+    this.load.image('materials', './materials.png')
+    this.load.image('technologylevel', './tech.png')
   }
 
   create(options)
@@ -127,7 +142,7 @@ export default class Game extends Phaser.Scene {
     this.projectiles = this.physics.add.group()
 
     this.exitPortal = new ExitPortal(this, width / 2, height / 2 - 5)
-    this.exitPortal.setData('stability', options.stability || 0)
+    this.exitPortal.setData('stability', options.stability || INITIAL_STABILITY)
     this.add.existing(this.exitPortal)
 
     this.portals = this.add.group()
@@ -138,7 +153,7 @@ export default class Game extends Phaser.Scene {
     for (let i = 0; i < PORTAL_COUNT; i++)
     {
       const portal = new Portal(this, new Phaser.Math.Vector2(width / 2, height / 2), {
-        threatLevel: 1
+        threatLevel: this.game.registry.get('threatlevel')
       })
       this.portals.add(portal, true)
     }

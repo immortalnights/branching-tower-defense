@@ -76,7 +76,7 @@ export default class Walker extends Phaser.GameObjects.Arc {
             stability -= this.getData('stabilityDamage')
           }
 
-          this.scene.exitPortal.setData('stability', Phaser.Math.Clamp(stability, -100, 100))
+          this.scene.exitPortal.setData('stability', Phaser.Math.Clamp(stability, 0, 100))
 
           // TODO monsters don't die when reaching the core, they attack it
           // causing core damage per second

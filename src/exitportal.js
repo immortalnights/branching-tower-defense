@@ -12,6 +12,7 @@ export default class ExitPortal extends Phaser.GameObjects.Triangle {
     this.setFillStyle(0x000000, 0.9)
     this.setStrokeStyle(2, 0x111111, 1)
 
+    // Overwritten by game scene default
     this.setData('stability', 0)
 
     this.setInteractive()

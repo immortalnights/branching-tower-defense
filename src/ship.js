@@ -20,6 +20,7 @@ export default class Ship extends Phaser.GameObjects.Graphics {
     this.setData({
       technologylevel: 1,
       materials: 200,
+      datafragments: 0,
     })
     this.setProjectileDamage(1)
     this.setRateOfFire(0.5)
@@ -63,7 +64,8 @@ export default class Ship extends Phaser.GameObjects.Graphics {
       x: this.x,
       y: this.y,
       r: this.body.rotation,
-      materials: this.getData('materials')
+      materials: this.getData('materials'),
+      datafragments: this.getData('datafragments')
     }
   }
 
@@ -75,7 +77,10 @@ export default class Ship extends Phaser.GameObjects.Graphics {
       this.y = data.y
       // this.rotation = data.rotation
       this.body.rotation = data.rotation
-      this.setData('materials', data.materials)
+      this.setData({
+        materials: data.materials,
+        datafragments: data.datafragments
+      })
     }
   }
 

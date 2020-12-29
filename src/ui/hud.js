@@ -13,7 +13,10 @@ class DataValueDisplay extends Phaser.GameObjects.Container {
   {
     super(scene, x, y)
 
-    options = Object.assign({ align: 'center' }, options)
+    options = Object.assign({
+      fontSize: 16,
+      align: 'center'
+    }, options)
 
     if (background)
     {
@@ -23,7 +26,7 @@ class DataValueDisplay extends Phaser.GameObjects.Container {
       this.add(border)
     }
 
-    const text = new Phaser.GameObjects.Text(scene, 0, 0, formatter(0))
+    const text = new Phaser.GameObjects.Text(scene, 0, 0, formatter(0), { fontSize: options.fontSize })
     text.setOrigin(0.5, 0.5)
     text.setAlign(options.align)
 
@@ -51,6 +54,50 @@ class DataValueDisplay extends Phaser.GameObjects.Container {
     })
 
     text.setText(formatter(dm.get(property)))
+  }
+}
+
+class LocalPlayerResources extends Phaser.GameObjects.Container {
+  constructor(scene, x, y, player)
+  {
+    super(scene, x, y)
+
+    const width = 100
+    const height = 96
+
+    const border = new Phaser.GameObjects.Rectangle(scene, 0, 0, width, height)
+    border.setFillStyle(0x000000, 1)
+    border.setStrokeStyle(1, 0x111111, 1)
+    this.add(border)
+
+    const materialIcon = new Phaser.GameObjects.Image(scene, -30, -30, 'materials')
+    materialIcon.setScale(0.8)
+    this.add(materialIcon)
+
+    const materialsLabel = new DataValueDisplay(scene, 25, -30, player, 'materials', val => {
+      return `${val.toFixed(0).padStart(3, '0')}`
+    }, null, { align: 'right', width: 50 })
+    this.add(materialsLabel)
+
+
+    const dataFragmentIcon = new Phaser.GameObjects.Image(scene, -30, 0, 'datafragments')
+    dataFragmentIcon.setScale(0.8)
+    this.add(dataFragmentIcon)
+
+    const dataFragmentsLabel = new DataValueDisplay(scene, 25, 0, player, 'datafragments', val => {
+      return `${val.toFixed(0).padStart(2, '0')}`
+    }, null, { align: 'right', width: 50 })
+    this.add(dataFragmentsLabel)
+
+
+    const technologyLevelIcon = new Phaser.GameObjects.Image(scene, -30, 30, 'technologylevel')
+    technologyLevelIcon.setScale(0.8)
+    this.add(technologyLevelIcon)
+
+    const technologyLevelLabel = new DataValueDisplay(scene, 25, 30, player, 'technologylevel', val => {
+      return `${val.toFixed(0).padStart(2, '0')}`
+    }, null, { align: 'right', width: 50 })
+    this.add(technologyLevelLabel)
   }
 }
 
@@ -116,21 +163,31 @@ export default class HUD extends Phaser.Scene {
     }, undefined, { align: 'right', width: 185 })
     this.add.existing(threatLevelLabel)
 
-    const portalOverview = new PortalOverview(this, width / 2, height - 200)
+    const portalOverview = new PortalOverview(this, width / 2, height - 180)
     this.add.existing(portalOverview)
 
     // local player details
     const localPlayer = this.scene.get('game').localPlayer
+    const lpr = new LocalPlayerResources(this, width / 2 - 200, height - 100, localPlayer)
+    this.add.existing(lpr)
 
-    const materialsLabel = new DataValueDisplay(this, width / 2 - 110, height - 159, localPlayer, 'materials', val => {
-      return `Materials: ${val.toFixed(0).padStart(3, '0')}`
-    }, { width: 220, height: 32 })
-    this.add.existing(materialsLabel)
+    // const materialsLabel = new DataValueDisplay(this, width / 2 - 110, height - 159, localPlayer, 'materials', val => {
+    //   return `${val.toFixed(0).padStart(3, '0')}`
+    // }, { width: 220, height: 32 })
+    // this.add.existing(materialsLabel)
+    // this.add.image(width / 2- 150, height - 159, 'materials').setScale(0.10)
 
-    const technologyLevelLabel = new DataValueDisplay(this, width / 2 + 110, height - 159, localPlayer, 'technologylevel', val => {
-      return `Technology Level: ${val.toFixed(0).padStart(2, '0')}`
-    }, { width: 220, height: 32 })
-    this.add.existing(technologyLevelLabel)
+    // const dataFragmentsLabel = new DataValueDisplay(this, width / 2 + 150, height - 159, localPlayer, 'technologylevel', val => {
+    //   return `${val.toFixed(0).padStart(2, '0')}`
+    // }, { width: 220, height: 32 })
+    // this.add.existing(dataFragmentsLabel)
+    // this.add.image(width / 2- 150, height - 159, 'datafragment').setScale(0.10)
+
+    // const technologyLevelLabel = new DataValueDisplay(this, width / 2 + 110, height - 159, localPlayer, 'technologylevel', val => {
+    //   return `Technology Level: ${val.toFixed(0).padStart(2, '0')}`
+    // }, { width: 220, height: 32 })
+    // this.add.existing(technologyLevelLabel)
+    // const materialIcon = this.add.image(width / 2- 150, height - 159, 'materials').setScale(0.10)
 
     const portalStability = new PortalStability(this, width / 2, height - 100)
     this.add.existing(portalStability)

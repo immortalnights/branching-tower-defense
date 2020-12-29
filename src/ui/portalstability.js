@@ -24,13 +24,13 @@ export default class PortalStability extends Phaser.GameObjects.Container {
     this.add(label)
 
     const barMaxWidth = width - 20
-    const barMinWidth = 10
+    const barMinWidth = 2
     const barHeight = 20
     const stabilityBarBorder = new Phaser.GameObjects.Rectangle(scene, 0, -2, barMaxWidth, barHeight + 8)
     stabilityBarBorder.setStrokeStyle(1, 0x444444, 1)
     this.add(stabilityBarBorder)
 
-    const stabilityBar = new Phaser.GameObjects.Rectangle(scene, 0, -2, barMinWidth, barHeight)
+    const stabilityBar = new Phaser.GameObjects.Rectangle(scene, -(barMaxWidth / 2) + 5, -2, barMinWidth, barHeight)
     stabilityBar.setFillStyle(0x444444, 0.9)
     this.add(stabilityBar)
 
@@ -38,44 +38,37 @@ export default class PortalStability extends Phaser.GameObjects.Container {
     stabilityPercentage.setOrigin(0.5, 0.5)
     this.add(stabilityPercentage)
 
-    let change = 1
-
     // Testing
+    // let change = 1
     // setInterval(() => {
     //   let s = this.getData('stability')
-    //   if (s === 25)
+    //   if (s === 100)
     //   {
     //     change = -1
     //   }
 
-    //   if (s === -25)
+    //   if (s === 0)
     //   {
     //     change = 1
     //   }
 
     //   this.incData('stability', change)
-    // }, 50)
+    //   update(this.getData('stability'))
+    // }, 250)
 
     const update = val => {
-      let w = Math.max(Math.abs((barMaxWidth / 2) * (val / 100)), barMinWidth)
+      const w = Math.floor((barMaxWidth - 8) * (val / 100))
       stabilityBar.width = w
 
-      if (val > 5)
+      if (val > 25)
       {
         // Good
         stabilityBar.setFillStyle(0x44FF44, 0.9)
-        stabilityBar.x = 0
       }
-      else if (val < -5)
+      else if (val < 25)
       {
         // Bad
         stabilityBar.setFillStyle(0xFF4444, 0.9)
-        // stabilityBar.setOrigin()
-        stabilityBar.x = 10 - w
-      }
-      else
-      {
-        stabilityBar.setFillStyle(0x444444, 0.9)
       }
 
       stabilityPercentage.setText(`${val.toFixed(0)}%`)
@@ -88,7 +81,7 @@ export default class PortalStability extends Phaser.GameObjects.Container {
         update(val)
       })
 
-      this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         exitPortal.off('changedata-stability')
       })
 
