@@ -1,7 +1,6 @@
-'use strict'
-
 import Phaser from 'phaser'
 import Tower from './tower'
+import Spawner, { SPAWNER_EVENTS } from './components/spawner.js'
 import Walker from './enemies/walker'
 import { GameEvents, PortalStates } from './defines'
 
@@ -12,11 +11,6 @@ const PortalConfiguration = {
   pathSegments: 6,
   threatLevel: 1,
   maximumTechnologyLevel: 1
-}
-
-
-const getThreatLevelName = threatLevel => {
-  return "Unknown"
 }
 
 
@@ -33,13 +27,22 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     config = Object.assign({}, PortalConfiguration, config)
     console.log("Portal config", config)
 
+    // Apply the Spawner component, but override the spawn monster function for custom monster creation
+    Object.assign(this, Spawner, {
+      spawnMonster: function(config)
+      {
+        const obj = new Walker(this.scene, this.path, config)
+        this.monsters.add(obj)
+        return obj
+      }
+    })
+    this.initializeSpawner(Walker, config.threatLevel)
+
     // represents the path
     this.path = new Phaser.Curves.Path(origin.x, origin.y)
     this.towers = new Phaser.GameObjects.Group(scene)
     // represents the spawner (currently a square at the end of the line)
     // this.icon = undefined
-    // spawned "monsters" are added to this group
-    this.monsters = new Phaser.GameObjects.Group(scene)
 
     this.particleManager = new Phaser.GameObjects.Particles.ParticleEmitterManager(scene, 'flare')
     this.exploderEmitter = this.particleManager.createEmitter({
@@ -52,27 +55,10 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       tint: 0x990000
     })
 
-    const totalWaves = 1 + config.threatLevel
-    console.log(`Portal threat ${config.threatLevel}, waves ${totalWaves}`)
+    console.log(`Portal threat ${config.threatLevel}, waves ${this.getData('totalWaves')}`)
 
     // TODO pick better wave / monster counts
     this.setState(PortalStates.WAITING)
-    this.setData({
-      threatLevel: config.threatLevel,
-      threat: getThreatLevelName(config.threatLevel),
-      // total waves
-      totalWaves,
-      // total monsters
-      totalMonsters: undefined,
-      // wave count
-      wave: 0,
-      // next wave or spwan time
-      nextEventAt: 0,
-      // monsters spawned this wave
-      spawnedForWave: 0,
-      // total monsters spawned
-      spawned: 0,
-    })
 
     // FIXME better name!
     const groupTypes = [
@@ -117,50 +103,23 @@ export default class Portal extends Phaser.GameObjects.Graphics {
         delay: 5000
       }
     ]
-
-    const weightedValue = (base, threat) => {
-      return Math.ceil(base * (1 + ~~(Math.pow(Phaser.Math.RND.frac(), 2) * (threat) + 0.5)))
-    }
-
-    this.waveSettings = []
-    let totalMonsters = 0
-    for (let w = 0; w < totalWaves; w++)
-    {
-      const groupType = Phaser.Math.RND.weightedPick(groupTypes)
-
-      // time between each wave (first wave begins when the level countdown expires)
-      const delay = Phaser.Math.RND.between(1500, groupType.delay)
-      // monsters stats for wave
-      const monsters = weightedValue(groupType.monsterMultiplier, config.threatLevel)
-      const healthMultiplier = weightedValue(groupType.healthMultiplier, config.threatLevel)
-      const speedMultiplier = weightedValue(groupType.speedMultiplier, config.threatLevel)
-      // time between each monster
-      const spawnDelay = Phaser.Math.RND.between(200, ((groupType.delay * 4) / 100))
-
-      const waveSettings = {
-        delay,
-        monsters,
-        modifiers: {
-          healthMultiplier,
-          speedMultiplier,
-        },
-        spawnDelay,
-      }
-
-      console.log(`Wave ${w} for threat ${config.threatLevel}, ${groupType.type}:`, waveSettings)
-      this.waveSettings.push(waveSettings)
-
-      totalMonsters += waveSettings.monsters
-    }
-
-    this.setData({ totalMonsters })
+    this.initializeWaves(groupTypes)
 
     // TODO - plot incrementally over time for a better effect
     this.plotPath(config.pathSegments)
 
+    // Handle Spawner events
+    this.on(SPAWNER_EVENTS.WAVE_COMPLETE, () => {
+      this.setState(PortalStates.WAVE_COUNTDOWN)
+    })
+
+    this.on(SPAWNER_EVENTS.ALL_WAVES_COMPLETE, () => {
+      this.setState(PortalStates.WAVE_COOLDOWN)
+    })
+
     this.once(Phaser.GameObjects.Events.ADDED_TO_SCENE, (obj, scene) => {
       scene.add.existing(this.towers)
-      scene.add.existing(this.monsters)
+      // scene.add.existing(this.monsters)
       scene.add.existing(this.particleManager)
 
       // FIXME find a better place to add the towers to the scene
@@ -200,10 +159,40 @@ export default class Portal extends Phaser.GameObjects.Graphics {
     this.emit(GameEvents.PORTAL_STATE_CHANGED, this, this.state, previous)
   }
 
+  onSpawned(obj)
+  {
+    // Bind to 'MONSTER_KILLED' event
+    obj.once(GameEvents.MONSTER_KILLED, obj => {
+      this.exploderEmitter.setPosition(obj.x, obj.y)
+      this.exploderEmitter.explode(10)
+
+      // TODO pass the Portal or emitter to the monster and get it to do this
+      obj.emitter = this.particleManager.createEmitter({
+        frequency: 1,
+        speed: 20,
+        scale: { start: 0.05, end: 0 },
+        blendMode: 'ADD',
+        tint: 0x444444
+      })
+
+      obj.emitter.startFollow(obj)
+    })
+
+    // Remove the emitter when the Object is destroyed
+    obj.once(Phaser.GameObjects.Events.DESTROY, obj => {
+      if (obj.emitter)
+      {
+        obj.emitter.remove()
+      }
+    })
+
+    this.scene.monsters.add(obj, true)
+  }
+
   preUpdate(time, delta)
   {
     const currentWave = this.getData('wave')
-    const waveSettings = this.waveSettings[currentWave]
+    const waveSettings = this._waveSettings[currentWave]
 
     switch (this.state)
     {
@@ -228,70 +217,8 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       }
       case PortalStates.SPAWNING:
       {
-        if (time > this.getData('nextEventAt'))
-        {
-          const monster = new Walker(this.scene, this.path, waveSettings.modifiers)
-          monster.once(GameEvents.MONSTER_KILLED, obj => {
-            this.exploderEmitter.setPosition(obj.x, obj.y)
-            this.exploderEmitter.explode(10)
-
-            // TODO pass the Portal or emitter to the monster and get it to do this
-            obj.emitter = this.particleManager.createEmitter({
-              frequency: 1,
-              speed: 20,
-              scale: { start: 0.05, end: 0 },
-              blendMode: 'ADD',
-              tint: 0x444444
-            })
-
-            obj.emitter.startFollow(obj)
-          })
-
-          monster.once(Phaser.GameObjects.Events.DESTROY, obj => {
-            if (obj.emitter)
-            {
-              obj.emitter.remove()
-            }
-          })
-
-          this.monsters.add(monster)
-          this.scene.monsters.add(monster, true)
-
-          this.incData('spawned')
-          this.incData('spawnedForWave')
-
-          // Is the wave complete?
-          if (this.getData('spawnedForWave') < waveSettings.monsters)
-          {
-            // No, continue spawning monsters
-            this.setData('nextEventAt', time + waveSettings.spawnDelay)
-          }
-          else
-          {
-            console.log(`Portal has spawned all wave monsters`)
-
-            // Are all waves complete?
-            if (currentWave < (this.getData('totalWaves') - 1))
-            {
-              // No, wait for the next wave to start
-              const nextWave = currentWave + 1
-              const nextWaveTime = time + this.waveSettings[nextWave].delay
-
-              this.setState(PortalStates.WAVE_COUNTDOWN)
-              this.setData({
-                wave: nextWave,
-                nextEventAt: nextWaveTime,
-                spawnedForWave: 0
-              })
-
-              console.log(`Next wave in ${((nextWaveTime - time) / 1000).toFixed(2)}s`)
-            }
-            else
-            {
-              this.setState(PortalStates.WAVE_COOLDOWN)
-            }
-          }
-        }
+        // Perform time check and spawn if required
+        this.spawn(time, delta)
         break
       }
       case PortalStates.WAVE_COOLDOWN:
