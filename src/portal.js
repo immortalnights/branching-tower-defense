@@ -204,6 +204,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
       {
         break
       }
+      // delay before the next way
       case PortalStates.WAVE_COUNTDOWN:
       {
         if (time > this.getData('nextEventAt'))
@@ -221,6 +222,7 @@ export default class Portal extends Phaser.GameObjects.Graphics {
         this.spawn(time, delta)
         break
       }
+      // delay before expiring the portal (wait until all monsters have been destroyed)
       case PortalStates.WAVE_COOLDOWN:
       {
         if (this.monsters.getChildren().length == 0)

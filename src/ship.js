@@ -93,22 +93,4 @@ export default class Ship extends Phaser.GameObjects.Graphics {
   {
     // Abstract
   }
-
-  // fire(target, delta)
-  // {
-  //   const p = new Projectile(this.scene, this.x, this.y, {
-  //     baseSpeed: this.getData('bulletSpeed'),
-  //     damage: this.getData('damage') * this.getData('damageMultiplier'),
-  //   })
-  //   this.scene.projectiles.add(p, true)
-  //   this.projectiles.add(p)
-
-  //   this.scene.physics.velocityFromRotation(this.rotation, p.getData('speed'), p.body.velocity)
-  // }
-
-  // preUpdate()
-  // {
-  //   super.preUpdate()
-
-  // }
 }
