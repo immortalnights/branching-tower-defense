@@ -150,7 +150,9 @@ export default class HUD extends Phaser.Scene {
       sceneEventHandlers[GameEvents.TOWER_BUILD_CLOSE]()
     })
 
-    const countdownTimer = new CountdownTimer(this, width / 2, 25)
+    const hcenter = width / 2
+
+    const countdownTimer = new CountdownTimer(this, hcenter, 25)
     this.add.existing(countdownTimer)
 
     const locationLabel = new DataValueDisplay(this, width - 100, 16, this.game, 'location', val => {
@@ -163,12 +165,12 @@ export default class HUD extends Phaser.Scene {
     }, undefined, { align: 'right', width: 185 })
     this.add.existing(threatLevelLabel)
 
-    const portalOverview = new PortalOverview(this, width / 2, height - 180)
+    const portalOverview = new PortalOverview(this, hcenter, height - 180)
     this.add.existing(portalOverview)
 
     // local player details
     const localPlayer = this.scene.get('game').localPlayer
-    const lpr = new LocalPlayerResources(this, width / 2 - 200, height - 100, localPlayer)
+    const lpr = new LocalPlayerResources(this, hcenter - 200, height - 100, localPlayer)
     this.add.existing(lpr)
 
     // const materialsLabel = new DataValueDisplay(this, width / 2 - 110, height - 159, localPlayer, 'materials', val => {
@@ -188,6 +190,15 @@ export default class HUD extends Phaser.Scene {
     // }, { width: 220, height: 32 })
     // this.add.existing(technologyLevelLabel)
     // const materialIcon = this.add.image(width / 2- 150, height - 159, 'materials').setScale(0.10)
+
+
+    const border = new Phaser.GameObjects.Rectangle(this, hcenter + 200, height - 100, 100, 96)
+    border.setFillStyle(0x000000, 1)
+    border.setStrokeStyle(1, 0x111111, 1)
+    this.add.existing(border)
+
+    this.add.text(hcenter + 160, height - 100, "Transfer")
+    this.add.text(hcenter + 160, height - 80, "Emergency Transfer")
 
     const portalStability = new PortalStability(this, width / 2, height - 100)
     this.add.existing(portalStability)
